@@ -12,6 +12,7 @@ import java.util.Collections;
 import java.util.List;
 import net.minecraft.client.Minecraft;
 import net.minecraft.src.ModLoader;
+import net.minecraft.world.World;
 // forge
 import net.minecraft.world.chunk.Chunk;
 import net.minecraftforge.common.MinecraftForge;
@@ -41,7 +42,6 @@ public class GeoSharer {
     	private boolean isActive;
     	private Minecraft mc;
     	
- 	
     	public GeoSharer()
     	{
     		isActive=true;
@@ -49,11 +49,15 @@ public class GeoSharer {
     		updateChunks = new ArrayList<GeoSharerChunk>();
     	}
     	
-    	public void WorldActive()
+    	public void WorldActive(World world)
     	{
+    		if (!world.isRemote)
+    		{
+    			isActive = false;
+    			return;
+    		}
     		String timeText = new SimpleDateFormat("yyyyMMdd_HHmmss").format(Calendar.getInstance().getTime());
     		String folderPath = "mods/GeoSharer";
-    		
     		String fileName =  "mods/GeoSharer/" + timeText  + ".geosharer";
     		try{
     			outFile = new File(fileName);
@@ -81,10 +85,13 @@ public class GeoSharer {
     		}
     		updateChunks.clear();
     		try {
-    			writer.flush();
-    			writer.close();
+    			if (writer != null)
+    			{
+    				writer.flush();
+    				writer.close();
+    			}
     		} catch (Exception e) {
-				// Your output file is fucked. Deal with it
+				System.err.println("GeoSharer was unable to save your output file.");
 			}
     		finally {
     			outFile = null;
@@ -155,10 +162,9 @@ public class GeoSharer {
         
         @Init
         public void load(FMLInitializationEvent event) { 
-        	MinecraftForge.EVENT_BUS.register(new ChunkEventHandler());
+        	MinecraftForge.EVENT_BUS.register(new GeoEventHandler());
         }
         
         @PostInit
         public void postInit(FMLPostInitializationEvent event) { }
-        
 }

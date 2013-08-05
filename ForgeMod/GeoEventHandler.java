@@ -6,7 +6,7 @@ import net.minecraftforge.event.world.ChunkDataEvent;
 import net.minecraftforge.event.world.ChunkEvent;
 import net.minecraftforge.event.world.WorldEvent;
 
-public class ChunkEventHandler {
+public class GeoEventHandler {
 	
 	@ForgeSubscribe
 	public void onChunkChange(ChunkEvent chunksave){
@@ -17,7 +17,7 @@ public class ChunkEventHandler {
 	
 	@ForgeSubscribe
 	public void onWorldLoad(WorldEvent.Load loading){
-		GeoSharer.instance.WorldActive();
+		GeoSharer.instance.WorldActive(loading.world);
 	}
 	
 	@ForgeSubscribe

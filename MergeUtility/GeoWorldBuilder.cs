@@ -1,17 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Substrate;
 using Substrate.Core;
 using System.IO;
+using Substrate.Nbt;
 
 namespace net.azirale.civcraft.GeoSharer
 {
     class GeoWorldBuilder
     {
-        private NbtWorld World;
+        private AnvilWorld World;
         private Level Level;
 
         public bool CreateWorld(string folderPath, List<GeoChunk> addChunks)
@@ -25,27 +23,18 @@ namespace net.azirale.civcraft.GeoSharer
             World = AnvilWorld.Create(folderPath);
             Console.WriteLine("Trimming to unique chunks. Started with " + addChunks.Count + " chunks");
             addChunks.Sort();
-            List<GeoChunk> uniqueChunks = addChunks.Distinct().ToList();
-            Console.WriteLine("Trimmed to " + uniqueChunks.Count + " unique chunks");
-            IChunkManager chunker = World.GetChunkManager();
-            foreach (GeoChunk addChunk in uniqueChunks) InsertChunk(addChunk, chunker);
-
-            foreach (ChunkRef chunk in chunker)
-            {
-                AlphaBlockCollection blocker = chunk.Blocks;
-                blocker.RebuildHeightMap();
-                blocker.RebuildBlockLight();
-                blocker.RebuildSkyLight();
-                chunker.SaveChunk(chunk);
-            }
+            RegionChunkManager chunkManager = World.GetChunkManager();
+            foreach (GeoChunk addChunk in addChunks) InsertChunk(addChunk, chunkManager);
+            World.Save();
             return true;
         }
 
-        public bool InsertChunk(GeoChunk addChunk, IChunkManager chunker)
+        public bool InsertChunk(GeoChunk addChunk, IChunkManager chunkManager)
         {
             ChunkRef newChunk;
-            if (chunker.ChunkExists(addChunk.X, addChunk.Z)) { Console.WriteLine("Replacing existing chunk at X=" + addChunk.X + " Z=" + addChunk.Z); newChunk = chunker.GetChunkRef(addChunk.X, addChunk.Z); }
-            else { Console.WriteLine("Adding new chunk at X=" + addChunk.X + " Z=" + addChunk.Z); newChunk = chunker.CreateChunk(addChunk.X, addChunk.Z); }
+            if (chunkManager.ChunkExists(addChunk.X, addChunk.Z)) { Console.WriteLine("Replacing existing chunk at X=" + addChunk.X + " Z=" + addChunk.Z); newChunk = chunkManager.GetChunkRef(addChunk.X, addChunk.Z); }
+            else { Console.WriteLine("Adding new chunk at X=" + addChunk.X + " Z=" + addChunk.Z); newChunk = chunkManager.CreateChunk(addChunk.X, addChunk.Z); }
+            // add the blocks
             AlphaBlockCollection newBlocks = newChunk.Blocks;
             newBlocks.AutoFluid = false;
             newBlocks.AutoLight = false;
@@ -55,11 +44,22 @@ namespace net.azirale.civcraft.GeoSharer
                 newBlocks.SetBlock(block.X, block.Y, block.Z, new AlphaBlock(block.ID));
                 newBlocks.SetData(block.X, block.Y, block.Z, block.Meta);
             }
-            newChunk.IsDirty = true;
+            // add the biomes
+            AnvilChunk chunk = newChunk.GetChunkRef() as AnvilChunk;
+            TagNodeCompound level = chunk.Tree.Root["Level"] as TagNodeCompound;
+            level["Biomes"] = new TagNodeByteArray(addChunk.Biomes.CopyArray());
+            newChunk.SetChunkRef(chunk);
+            // flag changes
             newChunk.IsTerrainPopulated = true;
-            chunker.SaveChunk(newChunk);
+            newChunk.IsDirty = true;
+            // recalculate lighting and everything
+            newBlocks.RebuildHeightMap();
+            newBlocks.RebuildSkyLight();
+            newBlocks.RebuildBlockLight();
+            newBlocks.StitchSkyLight();
+            newBlocks.StitchBlockLight();
+            //done
             return true;
         }
-
     }
 }
