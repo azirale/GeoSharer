@@ -12,8 +12,7 @@ namespace net.azirale.civcraft.GeoSharer
         {
             InteractiveConsole interactive = new InteractiveConsole();
             interactive.Activate();
-            Console.WriteLine("Program ended. Press [Enter] to exit.");
-            Console.ReadLine();
+            Console.WriteLine("Program ended.");
         }
     }
 
@@ -47,14 +46,14 @@ namespace net.azirale.civcraft.GeoSharer
 
         private void Command_Test()
         {
-            Console.WriteLine(@"Reading file [C:\CustomPrograms\Minecraft\forge\mcp\jars\mods\GeoSharer\20130730_234728.geosharer");
-            string path = @"C:\CustomPrograms\Minecraft\forge\mcp\jars\mods\GeoSharer\20130730_234728.geosharer";
+            string path = @"C:\CustomPrograms\Minecraft\forge\mcp\jars\mods\GeoSharer\MCPTestServer_20130810_101940.geosharer";
+            Console.WriteLine(@"Reading file [" + path + "]");
             Reader reader = new Reader();
             reader.ReadFile(path);
             Console.WriteLine("Done reading file.\nReport:");
             Console.Write(reader.Report);
             GeoWorldBuilder builder = new GeoWorldBuilder();
-            builder.CreateWorld(@"C:\CustomPrograms\Minecraft\forge\mcp\jars\mods\GeoSharer", reader.GeoChunks);
+            builder.CreateWorld(@"C:\Users\Jon\AppData\Roaming\.minecraft\saves\GeoSharer", reader.GeoChunks);
         }
     }
 }

@@ -10,7 +10,6 @@ namespace net.azirale.civcraft.GeoSharer
     class GeoWorldBuilder
     {
         private AnvilWorld World;
-        private Level Level;
 
         public bool CreateWorld(string folderPath, List<GeoChunk> addChunks)
         {
@@ -21,11 +20,13 @@ namespace net.azirale.civcraft.GeoSharer
                     return false;
                 }
             World = AnvilWorld.Create(folderPath);
-            Console.WriteLine("Trimming to unique chunks. Started with " + addChunks.Count + " chunks");
+            Console.WriteLine("Sorting chunks by position. Using " + addChunks.Count + " chunks");
             addChunks.Sort();
             RegionChunkManager chunkManager = World.GetChunkManager();
             foreach (GeoChunk addChunk in addChunks) InsertChunk(addChunk, chunkManager);
+            Console.WriteLine("Finished adding chunks. Saving World Files.");
             World.Save();
+            Console.WriteLine("Done.");
             return true;
         }
 
