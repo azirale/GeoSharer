@@ -9,7 +9,7 @@ import net.minecraftforge.event.world.WorldEvent;
 public class GeoEventHandler {
 	
 	@ForgeSubscribe
-	public void onChunkChange(ChunkEvent chunksave){
+	public void onChunkChange(ChunkEvent.Unload chunksave){
 		if (chunksave == null) return;
 		if (chunksave.getChunk() == null) return;
 		GeoSharer.instance.AddChunk(chunksave.getChunk());
@@ -17,11 +17,11 @@ public class GeoEventHandler {
 	
 	@ForgeSubscribe
 	public void onWorldLoad(WorldEvent.Load loading){
-		GeoSharer.instance.WorldActive(loading.world);
+		GeoSharer.instance.activate(loading.world);
 	}
 	
 	@ForgeSubscribe
 	public void onWorldUnload(WorldEvent.Unload unloading){
-		GeoSharer.instance.ShutDown();
+		GeoSharer.instance.deactivate(unloading.world);
 	}
 }

@@ -44,22 +44,21 @@ public class GeoSharer {
     	
     	public GeoSharer()
     	{
-    		isActive=true;
+    		isActive=false;
     		mc = ModLoader.getMinecraftInstance();
     		updateChunks = new ArrayList<GeoSharerChunk>();
     	}
     	
-    	public void WorldActive(World world)
+    	public void activate(World world)
     	{
-    		if (!world.isRemote)
-    		{
-    			isActive = false;
-    			return;
-    		}
+    		if (isActive) return; // Already active
+    		if (!world.isRemote) { isActive = false; return; } // Does not activate on local worlds
+    		// Open up a file stream to write to
+    		String serverName = mc.getServerData().serverName.replaceAll("[^\\w]", "");
     		String timeText = new SimpleDateFormat("yyyyMMdd_HHmmss").format(Calendar.getInstance().getTime());
     		String folderPath = "mods/GeoSharer";
-    		String fileName =  "mods/GeoSharer/" + timeText  + ".geosharer";
-    		try{
+    		String fileName =  "mods/GeoSharer/" + serverName +"_" + timeText  + ".geosharer";
+    		try {
     			outFile = new File(fileName);
     			System.out.println("GeoSharer: Attempting to output to file '" + outFile.getAbsolutePath() + "'");
     			outFile.getParentFile().mkdirs();
@@ -76,15 +75,25 @@ public class GeoSharer {
     			writer = null;
     			isActive = false;
     		}
+    		isActive = true;
     	}
     	
-    	public void ShutDown(){
-    		this.isActive = false;
-    		for (GeoSharerChunk chunk : updateChunks){
-    			SaveChunk(chunk);
+    	public void deactivate(World world)
+    	{
+    		int playerX = (int)mc.thePlayer.posX/16;
+    		int playerZ = (int)mc.thePlayer.posZ/16;
+    		for (int x=-10;x<=10;++x)
+    		{
+    			for (int z=-10;z<=10;++z)
+    			{
+    				Chunk newChunk = world.getChunkFromChunkCoords(playerX+x, playerZ+z);
+    				if (!newChunk.isChunkLoaded) System.out.println("GeoSharer: End-of-world save tried to get chunk beyond sight range");
+    				else this.AddChunk(newChunk);
+    			}
     		}
-    		updateChunks.clear();
+    		
     		try {
+    			for (GeoSharerChunk chunk : updateChunks) if (isActive) SaveChunk(chunk);
     			if (writer != null)
     			{
     				writer.flush();
@@ -92,26 +101,32 @@ public class GeoSharer {
     			}
     		} catch (Exception e) {
 				System.err.println("GeoSharer was unable to save your output file.");
-			}
-    		finally {
+			} finally {
+	    		updateChunks.clear();
     			outFile = null;
     			writer = null;
+        		this.isActive = false;
     		}
     	}
     	
-    	public void AddChunk(Chunk chunk){
+    	public void AddChunk(Chunk chunk)
+    	{
     		if (!isActive) return; // Don't bother, the mod isn't active
     		if (chunk == null) return;
     		GeoSharerChunk newChunk = GeoSharerChunk.CreateFromChunk(chunk);
-    		if (updateChunks.remove(newChunk)) mc.thePlayer.addChatMessage("Removed chunk at x=" + newChunk.x + " z=" + newChunk.z);
+    		//if (updateChunks.remove(newChunk)) mc.thePlayer.addChatMessage("Removed chunk at x=" + newChunk.x + " z=" + newChunk.z);
+    		updateChunks.remove(newChunk);
     		updateChunks.add(newChunk);
     		if (updateChunks.size() > 1000) TrimStoredChunks();
-    		mc.thePlayer.addChatMessage("Added chunk at x=" + newChunk.x + " z=" + newChunk.z);
-    		mc.thePlayer.addChatMessage("There are " + updateChunks.size() + " chunks stored");
-    		mc.thePlayer.addChatMessage("Latest chunk is ~ " + newChunk.bytes.length + " bytes");
-    		mc.thePlayer.addChatMessage(new String(newChunk.bytes));
-    		System.out.println(outFile.getAbsolutePath());
+    		//mc.thePlayer.addChatMessage("Added chunk at x=" + newChunk.x + " z=" + newChunk.z);
+    		//mc.thePlayer.addChatMessage("There are " + updateChunks.size() + " chunks stored");
+    		//mc.thePlayer.addChatMessage("Latest chunk is ~ " + newChunk.bytes.length + " bytes");
+    		//mc.thePlayer.addChatMessage(new String(newChunk.bytes));
+    		//System.out.println(outFile.getAbsolutePath());
     	}
+    	
+    	
+    	
     	
     	private void TrimStoredChunks(){
    			GeoChunkComparator com = new GeoChunkComparator();
@@ -124,7 +139,11 @@ public class GeoSharer {
    			
     	}
     	
+    	
+    	
+    	
     	private void SaveChunk(GeoSharerChunk chunk){
+    		if (!isActive) return;
     		try {
     			writer.write(chunk.bytes);
     			writer.write('\n');
@@ -133,12 +152,15 @@ public class GeoSharer {
     		}
     		catch (Exception ex) {
     			mc.thePlayer.addChatMessage("GeoSharer failed to write to output file. Mod shutting down.");
+    			System.out.println("GeoSharer failed to write to output file. Mod shutting down.");
     			this.isActive = false;
     			this.updateChunks.clear();
     			this.outFile = null;
     			this.writer = null;
     		}
     	}
+    	
+    	
     	
     	public void PrintStatus(){
     		if (mc == null) return;
