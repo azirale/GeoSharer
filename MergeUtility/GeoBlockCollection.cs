@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 namespace net.azirale.civcraft.GeoSharer
 {
-    class GeoBlockCollection : IEnumerable<GeoBlock>
+    public class GeoBlockCollection : IEnumerable<GeoBlock>
     {
         private readonly GeoBlockData[] Blocks;
         public GeoBlockData BlockAt(int x, int y, int z)
@@ -25,6 +25,24 @@ namespace net.azirale.civcraft.GeoSharer
                         {
                             Blocks[y * 256 + x * 16 + z] = new GeoBlockData(blockBytes[(y * 256 + x * 16 + z) * 2], blockBytes[(y * 256 + x * 16 + z) * 2 + 1]);
                         }
+                    }
+                }
+            }
+        }
+
+        public GeoBlockCollection(byte[] idBytes, byte[] dataBytes, int maxY)
+        {
+            this.Blocks = new GeoBlockData[16 * 16 * (maxY + 1)];
+            for (int y = 0; y <= maxY; ++y)
+            {
+                for (int x = 0; x < 16; ++x)
+                {
+                    for (int z = 0; z < 16; ++z)
+                    {
+                        byte id = idBytes[y * 256 + x * 16 + z];
+                        byte data = dataBytes[y * 128 + x * 8 + z / 2];
+                        data = z % 2 == 0 ? (byte)(data / 16) : (byte)(data % 16); // dodgy bit shifting
+                        Blocks[y * 16 * 16 + x * 16 + z] = new GeoBlockData(id, data);
                     }
                 }
             }
@@ -54,7 +72,6 @@ namespace net.azirale.civcraft.GeoSharer
             public bool MoveNext()
             {
                 position++;
-                position++;
                 return (position < Blocks.Length);
             }
 
@@ -70,7 +87,7 @@ namespace net.azirale.civcraft.GeoSharer
                 get
                 {
                     if (position >= Blocks.Length) throw new InvalidOperationException();
-                    int i = position / 2;
+                    int i = position;
                     byte z = (byte)(i % 16);
                     i /= 16;
                     byte x = (byte)(i % 16);

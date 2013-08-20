@@ -1,6 +1,6 @@
 ﻿namespace net.azirale.civcraft.GeoSharer
 {
-    struct GeoBlockData
+    public struct GeoBlockData
     {
         public readonly byte ID;
         public readonly byte Meta;

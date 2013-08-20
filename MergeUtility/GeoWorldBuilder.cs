@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using Substrate;
 using Substrate.Core;
 using System.IO;
@@ -11,7 +10,8 @@ namespace net.azirale.civcraft.GeoSharer
     {
         private AnvilWorld World;
 
-        public bool CreateWorld(string folderPath, List<GeoChunk> addChunks)
+
+        public bool CreateWorld(string folderPath, GeoReader geoReader)
         {
             if (!Directory.Exists(folderPath)) try { Directory.CreateDirectory(folderPath); }
                 catch
@@ -20,34 +20,91 @@ namespace net.azirale.civcraft.GeoSharer
                     return false;
                 }
             World = AnvilWorld.Create(folderPath);
-            Console.WriteLine("Sorting chunks by position. Using " + addChunks.Count + " chunks");
-            addChunks.Sort();
             RegionChunkManager chunkManager = World.GetChunkManager();
-            foreach (GeoChunk addChunk in addChunks) InsertChunk(addChunk, chunkManager);
-            Console.WriteLine("Finished adding chunks. Saving World Files.");
+
+            Console.WriteLine("Reading geosharer file...");
+            int i = 0;
+            int added = 0;
+            int updated = 0;
+            int skipped = 0;
+            int failed = 0;
+            foreach (GeoChunk addChunk in geoReader)
+            {
+                if (i % 50 == 0) ProgressUpdate(geoReader.Status + " (" + i + " chunks complete)");
+                if (i % 250 == 0) chunkManager.Save();
+                Result thisResult = InsertChunk(addChunk, chunkManager);
+                switch (thisResult)
+                {
+                    case Result.Added: ++added; break;
+                    case Result.Updated: ++updated; break;
+                    case Result.Skipped: ++skipped; break;
+                    case Result.Failed: ++failed; break;
+                    default: break;
+                }
+                ++i;
+            }
+            Console.WriteLine("\nFinished reading file.\nAdded " + added + " new chunks.\nUpdated " + updated + " recent chunks.\nSkipped " + skipped + " old chunks.\nFailed on " + failed + " chunks.");
+            Console.WriteLine("Saving world files.");
             World.Save();
             Console.WriteLine("Done.");
             return true;
         }
 
-        public bool InsertChunk(GeoChunk addChunk, IChunkManager chunkManager)
+        private void ProgressUpdate(string statusText)
+        {
+            // reset the line
+            Console.SetCursorPosition(0, Console.CursorTop);
+            Console.Write(new string(' ', Console.BufferWidth));
+            Console.SetCursorPosition(0, Console.CursorTop - 1);
+            Console.Write(statusText);
+        }
+
+        public Result InsertChunk(GeoChunk addChunk, IChunkManager chunkManager)
         {
             ChunkRef newChunk;
-            if (chunkManager.ChunkExists(addChunk.X, addChunk.Z)) { Console.WriteLine("Replacing existing chunk at X=" + addChunk.X + " Z=" + addChunk.Z); newChunk = chunkManager.GetChunkRef(addChunk.X, addChunk.Z); }
-            else { Console.WriteLine("Adding new chunk at X=" + addChunk.X + " Z=" + addChunk.Z); newChunk = chunkManager.CreateChunk(addChunk.X, addChunk.Z); }
+            Result value;
+            if (chunkManager.ChunkExists(addChunk.X, addChunk.Z))
+            {
+                newChunk = chunkManager.GetChunkRef(addChunk.X, addChunk.Z);
+                value = Result.Updated;
+            }
+            else
+            {
+                newChunk = chunkManager.CreateChunk(addChunk.X, addChunk.Z);
+                value = Result.Added;
+            }
+            // check the timestamp, if it has one
+            AnvilChunk chunk = newChunk.GetChunkRef() as AnvilChunk;
+            TagNodeCompound level = chunk.Tree.Root["Level"] as TagNodeCompound;
+            if (level.ContainsKey("GeoTimestamp"))
+            {
+                long currentTimestamp = level["GeoTimestamp"].ToTagLong().Data;
+                if (currentTimestamp >= addChunk.TimeStamp) return Result.Skipped;
+                level["GeoTimestamp"] = new TagNodeLong(addChunk.TimeStamp);
+            }
+            else
+            {
+                level.Add("GeoTimestamp", new TagNodeLong(addChunk.TimeStamp));
+            }
             // add the blocks
             AlphaBlockCollection newBlocks = newChunk.Blocks;
             newBlocks.AutoFluid = false;
             newBlocks.AutoLight = false;
             newBlocks.AutoTileTick = false;
+
             foreach (GeoBlock block in addChunk.Blocks)
             {
-                newBlocks.SetBlock(block.X, block.Y, block.Z, new AlphaBlock(block.ID));
-                newBlocks.SetData(block.X, block.Y, block.Z, block.Meta);
+                try
+                {
+                    newBlocks.SetBlock(block.X, block.Y, block.Z, new AlphaBlock(block.ID, block.Meta));
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Block error: " + ex.Message);
+                    newBlocks.SetBlock(block.X, block.Y, block.Z, new AlphaBlock(0));
+                }
             }
             // add the biomes
-            AnvilChunk chunk = newChunk.GetChunkRef() as AnvilChunk;
-            TagNodeCompound level = chunk.Tree.Root["Level"] as TagNodeCompound;
             level["Biomes"] = new TagNodeByteArray(addChunk.Biomes.CopyArray());
             newChunk.SetChunkRef(chunk);
             // flag changes
@@ -60,7 +117,9 @@ namespace net.azirale.civcraft.GeoSharer
             newBlocks.StitchSkyLight();
             newBlocks.StitchBlockLight();
             //done
-            return true;
+            return value;
         }
     }
+
+    public enum Result { Added, Updated, Skipped, Failed }
 }

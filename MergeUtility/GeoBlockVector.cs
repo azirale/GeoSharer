@@ -1,6 +1,6 @@
 ﻿namespace net.azirale.civcraft.GeoSharer
 {
-    struct GeoBlockVector
+    public struct GeoBlockVector
     {
         public readonly byte X;
         public readonly byte Y;

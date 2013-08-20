@@ -1,4 +1,4 @@
-package net.azirale.civcraft;
+package net.azirale.geosharer;
 
 import net.minecraft.world.chunk.Chunk;
 import net.minecraftforge.event.ForgeSubscribe;
@@ -8,20 +8,27 @@ import net.minecraftforge.event.world.WorldEvent;
 
 public class GeoEventHandler {
 	
+	private GeoSharerCore geoCore;
+	
+	public GeoEventHandler(GeoSharerCore core)
+	{
+		this.geoCore = core;
+	}
+	
 	@ForgeSubscribe
 	public void onChunkChange(ChunkEvent.Unload chunksave){
 		if (chunksave == null) return;
 		if (chunksave.getChunk() == null) return;
-		GeoSharer.instance.AddChunk(chunksave.getChunk());
+		geoCore.addChunk(chunksave.getChunk());
 	}
 	
 	@ForgeSubscribe
 	public void onWorldLoad(WorldEvent.Load loading){
-		GeoSharer.instance.activate(loading.world);
+		geoCore.activate(loading.world);
 	}
 	
 	@ForgeSubscribe
 	public void onWorldUnload(WorldEvent.Unload unloading){
-		GeoSharer.instance.deactivate(unloading.world);
+		geoCore.deactivate(unloading.world);
 	}
 }

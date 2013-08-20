@@ -1,6 +1,6 @@
 ﻿namespace net.azirale.civcraft.GeoSharer
 {
-    class GeoBlock
+    public class GeoBlock
     {
         private readonly GeoBlockVector position;
         private readonly GeoBlockData data;

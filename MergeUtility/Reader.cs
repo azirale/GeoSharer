@@ -1,61 +1,137 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
-using System.Text;
 
 namespace net.azirale.civcraft.GeoSharer
 {
-    class Reader
+    class GeoReader : IEnumerable<GeoChunk>, IEnumerator<GeoChunk>
     {
-        public List<GeoChunk> GeoChunks { get; private set; }
-        public string Report { get { return reportBuilder.ToString(); } }
-        private StringBuilder reportBuilder;
+        private StreamReader stream;
+        private GZipStream zipStream;
+        private FileStream fileStream;
+        private GeoChunk current;
+        private FileInfo sourceFile;
 
-        public Reader()
+        public long Position { get { if (fileStream == null) return 0; return fileStream.Position; } }
+        public long Length { get { if (fileStream == null) return 0; return fileStream.Length; } }
+        public string Status
         {
-            GeoChunks = new List<GeoChunk>();
-            reportBuilder = new StringBuilder();
+            get
+            {
+                if (this.Length == 0) return "Err-- no data to read";
+                long current = this.Position;
+                int cOrder = 0;
+                while (current > 1024L) { current /= 1024; cOrder++; }
+                long total = this.Length;
+                int tOrder = 0;
+                while (total > 1024L) { total /= 1024; tOrder++; }
+                return (current + GetUnit(cOrder) + "/" + total + GetUnit(tOrder) + " ~ " + ((double)this.Position / (double)this.Length).ToString("p"));
+            }
+        }
+        private string GetUnit(int order)
+        {
+            switch (order)
+            {
+                case 0: return "B";
+                case 1: return "KB";
+                case 2: return "MB";
+                case 3: return "GB";
+                case 4: return "TB";
+                case 5: return "PB";
+                default: return "!!";
+            }
         }
 
-        public bool ReadFile(string path)
+        public GeoReader()
+        {
+            stream = null;
+            fileStream = null;
+            zipStream = null;
+            current = null;
+            sourceFile = null;
+        }
+
+        public bool SetFile(string path)
         {
             // Check that the file is ok
-            if (!path.EndsWith(".geosharer"))
+            if (stream != null)
             {
-                Console.WriteLine("ERROR: Only [.geosharer] files may be used");
+                stream.Close();
+                stream.Dispose();
+                stream = null;
+            }
+            this.sourceFile = new FileInfo(path);
+            if (!sourceFile.Exists)
+            {
+                Console.WriteLine("ERROR: No file at [" + path + "] for GeoReader");
                 return false;
             }
-            if (!File.Exists(path))
+            if (sourceFile.Extension != ".geosharer")
             {
-                Console.WriteLine("ERROR: No file at [" + path + "]");
+                Console.WriteLine("ERROR: Only [.geosharer] files may be used. Got [" + sourceFile.Extension + "]");
                 return false;
             }
-            // Open a stream and read it into a list of string objects
-            StreamReader stream = new StreamReader(path);
-            List<string> chunksText = new List<string>();
-            while (!stream.EndOfStream)
-            {
-                string newChunkText = stream.ReadLine().TrimEnd('\n');
-                chunksText.Add(newChunkText);
-            }
-            // Parse the string objects into more meaningful chunk objects
-
-
-            foreach (string s in chunksText)
-            {
-                byte[] decode = Convert.FromBase64String(s);
-                MemoryStream inStream = new MemoryStream(decode);
-                GZipStream zipper = new GZipStream(inStream, CompressionMode.Decompress);
-                MemoryStream outStream = new MemoryStream();
-                zipper.CopyTo(outStream);
-                byte[] chunkData = outStream.ToArray();
-                GeoChunk chunk = new GeoChunk();
-                chunk.ParseByteArray(chunkData);
-                GeoChunks.Add(chunk);
-                reportBuilder.AppendLine("Got " + chunk.ToString());
-            }
+            this.fileStream = this.sourceFile.OpenRead();
+            this.zipStream = new GZipStream(fileStream, CompressionMode.Decompress);
+            this.stream = new StreamReader(zipStream);
+            //this.stream = new StreamReader(sourceFile.FullName);
             return true;
         }
+
+        # region Enumerator Implementation
+        public GeoChunk Current
+        {
+            get { return current; }
+        }
+
+        public void Dispose()
+        {
+            if (this.stream != null)
+            {
+                this.stream.Close();
+                this.stream.Dispose();
+                this.stream = null;
+            }
+        }
+
+        object IEnumerator.Current
+        {
+            get { return current; }
+        }
+
+        public bool MoveNext()
+        {
+            if (this.stream == null) return false;
+            if (stream.EndOfStream)
+            {
+                current = null;
+                return false;
+            }
+            string text = stream.ReadLine();
+            current = GeoChunk.FromText(text);
+            if (current == null) return false;
+            return true;
+            
+        }
+
+        public void Reset()
+        {
+            current = null;
+            if (stream != null)
+            {
+                stream.Close();
+                stream.Dispose();
+            }
+            stream = null;
+        }
+
+        // This object is its own enumerator
+        public IEnumerator<GeoChunk> GetEnumerator() { return this; }
+
+        // Pass the enumerator as the interface rather than the class
+        IEnumerator IEnumerable.GetEnumerator() { return (IEnumerator)GetEnumerator(); }
+        #endregion
     }
 }
