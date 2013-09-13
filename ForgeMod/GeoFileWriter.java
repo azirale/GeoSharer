@@ -3,10 +3,13 @@ package net.azirale.geosharer;
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.lang.reflect.Field;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.zip.GZIPOutputStream;
 
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.src.ModLoader;
 
 public class GeoFileWriter
@@ -50,6 +53,7 @@ public class GeoFileWriter
 			zipStream.close();
 			outStream.flush();
 			outStream.close();
+			System.out.println("GeoSharer: Filewriter fully closed");
 		}
 		catch (Exception e)
 		{
@@ -65,7 +69,15 @@ public class GeoFileWriter
 		FileOutputStream outStream = null;
 		GZIPOutputStream zipStream = null;
 		BufferedOutputStream bufStream = null;
-		String serverName = ModLoader.getMinecraftInstance().getServerData().serverName.replaceAll("[^\\w]", "");
+
+		ServerData serverData = getServerData();
+		if (serverData == null)
+		{
+			System.out.println("GeoSharer: No ServerData - single player world?");
+			return null;
+		}
+		String serverName = serverData.serverName.replaceAll("[^\\w]", "");
+		
 		String timeText = new SimpleDateFormat("yyyyMMdd_HHmmss").format(Calendar.getInstance().getTime());
 		String folderPath = "mods/GeoSharer";
 		String fileName =  "mods/GeoSharer/" + serverName +"_" + timeText  + ".geosharer";
@@ -86,6 +98,22 @@ public class GeoFileWriter
 			return null; // couldn't create a valid GeoFileWriter
 		}
 		GeoFileWriter value = new GeoFileWriter(outStream, zipStream, bufStream);
+		return value;
+	}
+	
+	private static ServerData getServerData()
+	{
+		ServerData value = null;
+		for (Field field : Minecraft.class.getDeclaredFields()) {
+			if (field.getType() == ServerData.class) {
+				field.setAccessible(true);
+				try {
+					value = (ServerData)field.get(ModLoader.getMinecraftInstance());
+				} catch (Exception e) {
+					System.out.println("GeoSharer: Could not get server information [" + e.getCause().toString() + "]");
+				}
+			}
+		}
 		return value;
 	}
 }

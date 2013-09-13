@@ -30,6 +30,12 @@ class GeoSharerChunk
 	
 	public static GeoSharerChunk CreateFromChunk(Chunk chunk) {
 		GeoSharerChunk value = new GeoSharerChunk();
+		if (chunk == null)
+		{
+			System.err.println("GeoSharer was passed a null chunk for GeoSharerChunk.CreateFromChunk()");
+			value.bytes = null;
+			return value;
+		}
 		// Set this object's ID
 		value.x = chunk.xPosition;
 		value.z = chunk.zPosition;
@@ -85,11 +91,11 @@ class GeoSharerChunk
 				int meta = chunk.getBlockMetadata(x,y,z);
 				if (z%2==0)
 				{
-					//rawBytes[d] = (byte)(meta * 16); // bitshift left
+					rawBytes[d] = (byte)(meta << 4); // bitshift left 4 spaces
 				}
 				else
 				{
-					//rawBytes[d] = (byte)(meta + rawBytes[d]); // add the two together
+					rawBytes[d] = (byte)(rawBytes[d] | meta); // combine the two
 				}
 			}
 		}}}
@@ -103,6 +109,7 @@ class GeoSharerChunk
 			value.bytes = Base64.encode(byteStream.toByteArray());
 		}
 		catch (Exception ex) {
+			System.err.println("GeoSharer hit an exception when trying to encode new GeoChunk byte array");
 			value.bytes = null;
 		}
 		return value;

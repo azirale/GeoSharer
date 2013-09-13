@@ -1,6 +1,7 @@
 package net.azirale.geosharer;
 
 // Imports
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -28,11 +29,6 @@ public class GeoSharerCore {
     		if (isActive) // Already active, don't do anything
     		{
     			System.out.println("GeoSharer: Tried to re-activate while mod was already active");
-    			return;
-    		}
-    		if (!world.isRemote) // Do not activate on local worlds
-    		{ 
-    			System.out.println("GeoSharer: Activation blocked on local world");
     			return;
     		}
     		this.writer = GeoFileWriter.createNew();
@@ -77,7 +73,7 @@ public class GeoSharerCore {
     		if (!isActive) return; // Don't bother, the mod isn't active
     		if (chunk == null) return; // can't save a null object
     		if (chunk.isEmpty()) return; // no point saving an empty chunk
-    		if (chunk.worldObj.getWorldInfo().getDimension() != 0) return; // we only support overworld atm, -1=nether 1=end
+    		if (chunk.worldObj.provider.dimensionId != 0) return; // we only support overworld atm, -1=nether 1=end
     		int maxY = 0;
     		for (int i=0;i<256;++i)
     		{
