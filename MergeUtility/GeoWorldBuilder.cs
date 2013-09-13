@@ -3,6 +3,7 @@ using Substrate;
 using Substrate.Core;
 using System.IO;
 using Substrate.Nbt;
+using System.Threading;
 
 namespace net.azirale.civcraft.GeoSharer
 {
@@ -10,15 +11,17 @@ namespace net.azirale.civcraft.GeoSharer
     {
         private AnvilWorld World;
 
-
-        public bool CreateWorld(string folderPath, GeoReader geoReader)
+        public void UpdateWorld(string folderPath, GeoReader geoReader)
         {
-            if (!Directory.Exists(folderPath)) try { Directory.CreateDirectory(folderPath); }
+            if (!Directory.Exists(folderPath))
+            {
+                try { Directory.CreateDirectory(folderPath); }
                 catch
                 {
                     Console.WriteLine("Unable to create directory, aborting world creation");
-                    return false;
+                    return;
                 }
+            }
             World = AnvilWorld.Create(folderPath);
             RegionChunkManager chunkManager = World.GetChunkManager();
 
@@ -30,7 +33,8 @@ namespace net.azirale.civcraft.GeoSharer
             int failed = 0;
             foreach (GeoChunk addChunk in geoReader)
             {
-                if (i % 50 == 0) ProgressUpdate(geoReader.Status + " (" + i + " chunks complete)");
+                //if (i % 50 == 0) ProgressUpdate(geoReader.GetStatusLine() + " (" + i + " chunks complete)");
+                new Thread(() => ProgressUpdate(geoReader)).Start();
                 if (i % 250 == 0) chunkManager.Save();
                 Result thisResult = InsertChunk(addChunk, chunkManager);
                 switch (thisResult)
@@ -47,16 +51,21 @@ namespace net.azirale.civcraft.GeoSharer
             Console.WriteLine("Saving world files.");
             World.Save();
             Console.WriteLine("Done.");
-            return true;
+            return;
         }
 
-        private void ProgressUpdate(string statusText)
+        private void ProgressUpdate(GeoReader reader)
         {
-            // reset the line
+            string statusText = reader.GetStatusLine();
+            ClearConsoleLine();
+            Console.Write(statusText);
+        }
+
+        private void ClearConsoleLine()
+        {
             Console.SetCursorPosition(0, Console.CursorTop);
             Console.Write(new string(' ', Console.BufferWidth));
             Console.SetCursorPosition(0, Console.CursorTop - 1);
-            Console.Write(statusText);
         }
 
         public Result InsertChunk(GeoChunk addChunk, IChunkManager chunkManager)
@@ -94,14 +103,22 @@ namespace net.azirale.civcraft.GeoSharer
 
             foreach (GeoBlock block in addChunk.Blocks)
             {
-                try
+                switch (block.ID)
                 {
-                    newBlocks.SetBlock(block.X, block.Y, block.Z, new AlphaBlock(block.ID, block.Meta));
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine("Block error: " + ex.Message);
-                    newBlocks.SetBlock(block.X, block.Y, block.Z, new AlphaBlock(0));
+                    case 154: break; // ignore hoppers
+                    case 158: break; // ignore droppers
+                    default:
+                        try
+                        {
+                            newBlocks.SetBlock(block.X, block.Y, block.Z, new AlphaBlock(block.ID, block.Meta));
+                        }
+                        catch (Exception ex)
+                        {
+                            ClearConsoleLine();
+                            Console.WriteLine("Block error: " + ex.Message);
+                            newBlocks.SetBlock(block.X, block.Y, block.Z, new AlphaBlock(0));
+                        }
+                        break;
                 }
             }
             // add the biomes

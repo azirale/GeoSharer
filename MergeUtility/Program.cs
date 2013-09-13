@@ -72,7 +72,8 @@ namespace net.azirale.civcraft.GeoSharer
             string dirPath = Path.GetDirectoryName(fileSearch);
             string filePath = fileSearch.Substring(dirPath.Length + 1);
             if (!Path.IsPathRooted(dirPath)) dirPath = Path.Combine(Directory.GetCurrentDirectory(), dirPath);
-            input = Directory.GetFiles(dirPath, filePath);            
+            if (Directory.Exists(dirPath)) input = Directory.GetFiles(dirPath, filePath);
+            else { input = new string[0]; }
             Console.WriteLine("Set input files to the following...");
             foreach (string s in input)
             {
@@ -95,19 +96,8 @@ namespace net.azirale.civcraft.GeoSharer
 
             GeoReader reader = new GeoReader();
             GeoWorldBuilder builder = new GeoWorldBuilder();
-            int i = 0;
-            foreach (string s in input)
-            {
-                if (!reader.SetFile(s))
-                {
-                    Console.WriteLine("Could not read [" + s + "]");
-                    continue;
-                }
-                i++;
-                Console.WriteLine("Merging file " + i + " of " + input.Length);
-                builder.CreateWorld(output, reader);
-            }
-
+            foreach (string s in input) if (!reader.AddFile(s)) Console.WriteLine("Invalid file [" + s + "]");
+            builder.UpdateWorld(output, reader);
         }
 
         private void Test()

@@ -41,7 +41,7 @@ namespace net.azirale.civcraft.GeoSharer
                     {
                         byte id = idBytes[y * 256 + x * 16 + z];
                         byte data = dataBytes[y * 128 + x * 8 + z / 2];
-                        data = z % 2 == 0 ? (byte)(data / 16) : (byte)(data % 16); // dodgy bit shifting
+                        data = z % 2 == 0 ? (byte)(data >> 4) : (byte)(data & 0x00FF); // dodgy bit shifting
                         Blocks[y * 16 * 16 + x * 16 + z] = new GeoBlockData(id, data);
                     }
                 }

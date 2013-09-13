@@ -22,6 +22,7 @@ namespace net.azirale.civcraft.GeoSharer
 
         private static byte[] GetArrayFromText(string text)
         {
+            if (text == null) return null;
             byte[] decode = Convert.FromBase64String(text);
             MemoryStream inStream = new MemoryStream(decode);
             GZipStream zipper = new GZipStream(inStream, CompressionMode.Decompress);
@@ -67,7 +68,6 @@ namespace net.azirale.civcraft.GeoSharer
                 offset += dataBytes.Length;
                 // create the new blocks
                 Blocks = new GeoBlockCollection(idBytes, dataBytes, maxY);
-                if (true) { }
             }
             catch { return false; }
             return true;

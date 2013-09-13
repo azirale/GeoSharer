@@ -3,36 +3,67 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
+using System.Text;
 
 namespace net.azirale.civcraft.GeoSharer
 {
-    class GeoReader : IEnumerable<GeoChunk>, IEnumerator<GeoChunk>
+    class GeoReader : IEnumerable<GeoChunk>
     {
-        private StreamReader stream;
-        private GZipStream zipStream;
-        private FileStream fileStream;
-        private GeoChunk current;
-        private FileInfo sourceFile;
+        /***** CONSTRUCTOR MEMBERS **************************************************************/
+        #region Constructor Members
 
-        public long Position { get { if (fileStream == null) return 0; return fileStream.Position; } }
-        public long Length { get { if (fileStream == null) return 0; return fileStream.Length; } }
-        public string Status
+        public GeoReader()
         {
-            get
-            {
-                if (this.Length == 0) return "Err-- no data to read";
-                long current = this.Position;
-                int cOrder = 0;
-                while (current > 1024L) { current /= 1024; cOrder++; }
-                long total = this.Length;
-                int tOrder = 0;
-                while (total > 1024L) { total /= 1024; tOrder++; }
-                return (current + GetUnit(cOrder) + "/" + total + GetUnit(tOrder) + " ~ " + ((double)this.Position / (double)this.Length).ToString("p"));
-            }
+            this.sourceFiles = new List<FileInfo>();
+            this.totalLength = 0;
+            this.currentPosition = 0;
         }
-        private string GetUnit(int order)
+
+        #endregion
+
+        private List<FileInfo> sourceFiles;
+        private long totalLength;
+        private long currentPosition;
+
+        public bool AddFile(string filePath)
         {
-            switch (order)
+            FileInfo fi = new FileInfo(filePath);
+            if (!fi.Exists)
+            {
+                Console.WriteLine("ERROR: File does not exist: [" + filePath + "]");
+                return false;
+            }
+            if (fi.Extension != ".geosharer")
+            {
+                Console.WriteLine("ERROR: Only [.geosharer] files may be used. Got [" + fi.Extension + "]");
+                return false;
+            }
+            this.totalLength += fi.Length;
+            this.sourceFiles.Add(fi);
+            return true;
+        }
+
+
+        public string GetStatusLine()
+        {
+            if (this.totalLength == 0) return "Err-- no data to read;";
+            StringBuilder builder = new StringBuilder();
+            builder.Append(ShortenedSize(currentPosition));
+            builder.Append('/');
+            builder.Append(ShortenedSize(totalLength));
+            builder.Append(" ~ ");
+            builder.Append(((double)this.currentPosition / (double)this.totalLength).ToString("p"));
+            return builder.ToString();
+        }
+
+        /// <summary>
+        /// Returns the units suffix for memory amounts
+        /// </summary>
+        /// <param name="exponent">Exponent for 1024^E bytes</param>
+        /// <returns></returns>
+        private string GetUnit(int exponent)
+        {
+            switch (exponent)
             {
                 case 0: return "B";
                 case 1: return "KB";
@@ -44,94 +75,116 @@ namespace net.azirale.civcraft.GeoSharer
             }
         }
 
-        public GeoReader()
+        private string ShortenedSize(long size)
         {
-            stream = null;
-            fileStream = null;
-            zipStream = null;
-            current = null;
-            sourceFile = null;
+            int exponent = 0;
+            while (size >= 1024L)
+            {
+                size /= 1024;
+                exponent++;
+            }
+            return size.ToString() + GetUnit(exponent);
         }
 
-        public bool SetFile(string path)
-        {
-            // Check that the file is ok
-            if (stream != null)
-            {
-                stream.Close();
-                stream.Dispose();
-                stream = null;
-            }
-            this.sourceFile = new FileInfo(path);
-            if (!sourceFile.Exists)
-            {
-                Console.WriteLine("ERROR: No file at [" + path + "] for GeoReader");
-                return false;
-            }
-            if (sourceFile.Extension != ".geosharer")
-            {
-                Console.WriteLine("ERROR: Only [.geosharer] files may be used. Got [" + sourceFile.Extension + "]");
-                return false;
-            }
-            this.fileStream = this.sourceFile.OpenRead();
-            this.zipStream = new GZipStream(fileStream, CompressionMode.Decompress);
-            this.stream = new StreamReader(zipStream);
-            //this.stream = new StreamReader(sourceFile.FullName);
-            return true;
-        }
+        #region Enumerator Implementation
 
-        # region Enumerator Implementation
-        public GeoChunk Current
-        {
-            get { return current; }
-        }
+        public IEnumerator<GeoChunk> GetEnumerator() { return new GeoReaderEnumerator(this); }
+        IEnumerator IEnumerable.GetEnumerator() { return (IEnumerator)new GeoReaderEnumerator(this); }
 
-        public void Dispose()
+        private class GeoReaderEnumerator : IEnumerator<GeoChunk>
         {
-            if (this.stream != null)
+
+            public GeoReaderEnumerator(GeoReader reader)
             {
-                this.stream.Close();
-                this.stream.Dispose();
+                this.parent = reader;
+                this.fileNumber = -1;
+                this.streamPos = 0;
                 this.stream = null;
+                this.zipStream = null;
+                this.fileStream = null;
+                this.current = null;
             }
-        }
 
-        object IEnumerator.Current
-        {
-            get { return current; }
-        }
+            private GeoReader parent;
+            private int fileNumber;
+            private long streamPos;
+            private StreamReader stream;
+            private GZipStream zipStream;
+            private FileStream fileStream;
+            private GeoChunk current;
 
-        public bool MoveNext()
-        {
-            if (this.stream == null) return false;
-            if (stream.EndOfStream)
+            public GeoChunk Current
             {
-                current = null;
-                return false;
+                get { return this.current; }
             }
-            string text = stream.ReadLine();
-            current = GeoChunk.FromText(text);
-            if (current == null) return false;
-            return true;
-            
-        }
 
-        public void Reset()
-        {
-            current = null;
-            if (stream != null)
+            public void Dispose()
             {
-                stream.Close();
-                stream.Dispose();
+                if (this.stream != null) this.stream.Dispose();
+                if (this.zipStream != null) this.zipStream.Dispose();
+                if (this.fileStream != null) this.fileStream.Dispose();
             }
-            stream = null;
+
+            object IEnumerator.Current
+            {
+                get { return this.current; }
+            }
+
+            public bool MoveNext()
+            {
+                if (this.stream == null) if (!NextStream()) return false;
+                if (this.stream.EndOfStream)
+                {
+                    if (!NextStream()) return false;
+                }
+                string text = this.stream.ReadLine();
+                this.parent.currentPosition += this.fileStream.Position - this.streamPos;
+                while (text == null) // this file was empty, keep going until we get a valid one or run out of files
+                {
+                    if (!NextStream()) return false;
+                    text = this.stream.ReadLine();
+                    this.parent.currentPosition += this.fileStream.Position - this.streamPos;
+                }
+                this.streamPos = this.fileStream.Position;
+                this.current = GeoChunk.FromText(text);
+                if (current == null) return false;
+                return true;
+            }
+
+            private bool NextStream()
+            {
+                if (this.stream != null) this.stream.Dispose();
+                if (this.zipStream != null) this.zipStream.Dispose();
+                if (this.fileStream != null) this.fileStream.Dispose();
+                this.fileNumber++;
+                while (fileNumber < this.parent.sourceFiles.Count && !this.parent.sourceFiles[fileNumber].Exists) fileNumber++;
+                if (this.fileNumber >= this.parent.sourceFiles.Count) return false; // Happens if the loop got to the end without finding a file
+                try
+                {
+                    this.streamPos = 0;
+                    this.fileStream = this.parent.sourceFiles[fileNumber].OpenRead();
+                    this.zipStream = new GZipStream(fileStream, CompressionMode.Decompress);
+                    this.stream = new StreamReader(zipStream);
+                }
+                catch
+                {
+                    if (this.stream != null) this.stream.Dispose();
+                    this.stream = null;
+                    if (this.zipStream != null) this.zipStream.Dispose();
+                    this.zipStream = null;
+                    if (this.fileStream != null) this.fileStream.Dispose();
+                    this.fileStream = null;
+                    return false;
+                }
+                return true;
+            }
+
+            public void Reset()
+            {
+                throw new NotImplementedException();
+            }
         }
 
-        // This object is its own enumerator
-        public IEnumerator<GeoChunk> GetEnumerator() { return this; }
-
-        // Pass the enumerator as the interface rather than the class
-        IEnumerator IEnumerable.GetEnumerator() { return (IEnumerator)GetEnumerator(); }
         #endregion
     }
 }
