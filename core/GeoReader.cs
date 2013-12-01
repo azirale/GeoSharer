@@ -3,64 +3,135 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
+using System.Net;
 using System.Text;
 
-namespace net.azirale.civcraft.GeoSharer
+namespace net.azirale.geosharer.core
 {
-    class GeoReader : IEnumerable<GeoChunk>
+    /// <summary>
+    /// Reads multiple .geosharer files from the GeoSharer mod as an enumerable set of GeoChunk objects
+    /// </summary>
+    public class GeoReader : IEnumerable<GeoChunk>, IMessageSender
     {
         /***** CONSTRUCTOR MEMBERS **************************************************************/
         #region Constructor Members
 
+        /// <summary>
+        /// Create a new, empty, GeoReader object
+        /// </summary>
         public GeoReader()
         {
             this.sourceFiles = new List<FileInfo>();
-            this.totalLength = 0;
-            this.currentPosition = 0;
+            this.TotalLength = 0;
+            this.CurrentPosition = 0;
         }
 
         #endregion
 
+        /***** PRIVATE FIELDS *******************************************************************/
+        #region Private Fields
+        /// <summary>
+        /// The .geosharer files that have been attached to this reader
+        /// </summary>
         private List<FileInfo> sourceFiles;
-        private long totalLength;
-        private long currentPosition;
+        #endregion
 
-        public bool AddFile(string filePath)
+        /***** PUBLIC PROPERTIES (READONLY) *****************************************************/
+        #region Public Properties (Readonly)
+        /// <summary>
+        /// The total byte length of all .geosharer files that have been attached to this reader
+        /// </summary>
+        public long TotalLength { get; private set; }
+
+        /// <summary>
+        /// The current byte position of the reader, relative to all attached .geosharer files
+        /// </summary>
+        public long CurrentPosition { get; private set; }
+        #endregion
+
+
+        /***** PUBLIC METHODS *******************************************************************/
+        #region Public Methods
+        /// <summary>
+        /// Attach another .geosharer file to the reader
+        /// </summary>
+        /// <param name="filePath">Absolute or relative path to the .geosharer file to attach</param>
+        /// <returns>TRUE for success, FALSE if failure</returns>
+        public bool AttachFile(string filePath)
         {
             FileInfo fi = new FileInfo(filePath);
             if (!fi.Exists)
             {
-                Console.WriteLine("ERROR: File does not exist: [" + filePath + "]");
+                this.SendMessage(MessageVerbosity.Error, "ERROR: Could not find file '" + filePath + "'");
                 return false;
             }
             if (fi.Extension != ".geosharer")
             {
-                Console.WriteLine("ERROR: Only [.geosharer] files may be used. Got [" + fi.Extension + "]");
+                this.SendMessage(MessageVerbosity.Error,("ERROR: Only '*.geosharer' files may be used. Got [" + fi.Extension + "]"));
                 return false;
             }
-            this.totalLength += fi.Length;
+            bool alreadyExists = false;
+            foreach (FileInfo existing in this.sourceFiles)
+            {
+                alreadyExists = alreadyExists | existing.FullName.Equals(fi.FullName);
+            }
+            if (alreadyExists)
+            {
+                this.SendMessage(MessageVerbosity.Normal, "Attempted to attach a second copy of the same file to a GeoReader");
+                return false;
+            }
+            this.TotalLength += fi.Length;
             this.sourceFiles.Add(fi);
+            this.sourceFiles.Sort(new FilesSorterDescending()); // sorted so we read the newest first
             return true;
         }
 
-
-        public string GetStatusLine()
+        private class FilesSorterDescending : IComparer<FileInfo>
         {
-            if (this.totalLength == 0) return "Err-- no data to read;";
+            public int Compare(FileInfo a, FileInfo b)
+            {
+                if (a.LastWriteTimeUtc < b.LastWriteTimeUtc) return 1;
+                else if (a.LastWriteTimeUtc > b.LastWriteTimeUtc) return -1;
+                else return 0;
+            }
+        }
+
+        /// <summary>
+        /// A useful text description of where the GeoReader object is up to 
+        /// </summary>
+        /// <returns></returns>
+        public string GetStatusText()
+        {
+            if (this.TotalLength == 0) return "No data to read;";
             StringBuilder builder = new StringBuilder();
-            builder.Append(ShortenedSize(currentPosition));
+            builder.Append(ShortenedSize(CurrentPosition));
             builder.Append('/');
-            builder.Append(ShortenedSize(totalLength));
+            builder.Append(ShortenedSize(TotalLength));
             builder.Append(" ~ ");
-            builder.Append(((double)this.currentPosition / (double)this.totalLength).ToString("p"));
+            builder.Append(((double)this.CurrentPosition / (double)this.TotalLength).ToString("p"));
             return builder.ToString();
         }
 
         /// <summary>
-        /// Returns the units suffix for memory amounts
+        /// Reverse the byte order of a long value, converting between Java order and C#
+        /// </summary>
+        /// <param name="value">A long for which you need the value </param>
+        /// <returns>Long </returns>
+        private long Reverse(long value)
+        {
+            return IPAddress.HostToNetworkOrder(value);
+        }
+
+        private int Reverse(int value)
+        {
+            return IPAddress.HostToNetworkOrder(value);
+        }
+
+        /// <summary>
+        /// Get the units suffix for memory amounts
         /// </summary>
         /// <param name="exponent">Exponent for 1024^E bytes</param>
-        /// <returns></returns>
+        /// <returns>String representation of the units - eg B, KB, MB</returns>
         private string GetUnit(int exponent)
         {
             switch (exponent)
@@ -85,7 +156,9 @@ namespace net.azirale.civcraft.GeoSharer
             }
             return size.ToString() + GetUnit(exponent);
         }
+        #endregion
 
+        /***** IENUMERATOR IMPLEMENTATION *******************************************************/
         #region Enumerator Implementation
 
         public IEnumerator<GeoChunk> GetEnumerator() { return new GeoReaderEnumerator(this); }
@@ -138,15 +211,15 @@ namespace net.azirale.civcraft.GeoSharer
                     if (!NextStream()) return false;
                 }
                 string text = this.stream.ReadLine();
-                this.parent.currentPosition += this.fileStream.Position - this.streamPos;
+                this.parent.CurrentPosition += this.fileStream.Position - this.streamPos;
                 while (text == null) // this file was empty, keep going until we get a valid one or run out of files
                 {
                     if (!NextStream()) return false;
                     text = this.stream.ReadLine();
-                    this.parent.currentPosition += this.fileStream.Position - this.streamPos;
+                    this.parent.CurrentPosition += this.fileStream.Position - this.streamPos;
                 }
                 this.streamPos = this.fileStream.Position;
-                this.current = GeoChunk.FromText(text);
+                this.current = GeoChunk.FromGeosharerText(text);
                 if (current == null) return false;
                 return true;
             }
@@ -186,5 +259,33 @@ namespace net.azirale.civcraft.GeoSharer
         }
 
         #endregion
+
+
+        /***** IMESSAGESENDER IMPLEMENTATION ****************************************************/
+        /// <summary>
+        /// IMessageSender event to send a message to a subscribing object method
+        /// </summary>
+        public event Message Messaging;
+
+        /// <summary>
+        /// IMessageSender method to get the list of object methods that are subscribed
+        /// to the IMessageSender.Messaging event of this object
+        /// </summary>
+        /// <returns></returns>
+        public Message GetMessagingList()
+        {
+            return this.Messaging;
+        }
+
+        /// <summary>
+        /// Proc the IMessageSender.Messaging event of this object
+        /// </summary>
+        /// <param name="verbosity">The channel this message should be sent through</param>
+        /// <param name="text">The text of this message</param>
+        private void SendMessage(MessageVerbosity verbosity, string text)
+        {
+            Message msg = this.Messaging;
+            if (msg != null) msg(this, new MessagePacket(verbosity, text));
+        }
     }
 }

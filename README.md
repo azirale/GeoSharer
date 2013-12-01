@@ -1,31 +1,35 @@
 GeoSharer
 =========
-
-A Forge mod and a .NET tool for sharing minecraft map data
+A Minecraft ForgeModLoader mod and a .NET tool for sharing minecraft multiplayer map data. Tailored for use with Civcraft (http://www.civcraft.vg/).
 
 
 Description
 ===========
-The ForgeMod .java files will need to be compiled using the Forge developer tools incorporating MCP.
-The current target version of Minecraft is 1.5.2
+Use Minecraft Forge and add the mod to your external mods. The mod will automatically download overworld data from any multiplayer server you play on, and store it in a stripped down and compressed ".geosharer" format in your .minecraft/mods/GeoSharer/ directory.
 
-The .cs files are compiled in Visual Studio Express 2012, for a console application.
-The target .NET framework version is 4.5
+These ".geosharer" files can be shared with map-making collaborators to ensure that everyone has the most up to date world data. Each chunk is given a timestamp, which is used to synchronise data from multiple ".geosharer" payloads.
+
+To take the ".geosharer" files and turn them into a world you need to use the GeoSharerCore library. If you want an existing package, use the WPF application. If you would like to roll your own UI you can use the core library to wrap your application around.
 
 
+Compiling
+=========
+The mod is compiled using Eclipse and Forge MCP for the relevant version of Minecraft.
 
-How it works
-============
-(assuming you have everything compiled already)
+The merge utility is compiled in VS2010 targeting the .NET v4 framework.
 
-Install the forge mod as per normal. While in a game the mod will automatically save compressed
-versions of the raw block data plus a timestamp for all chunks that are loaded. Once the game exists,
-the data is saved to a Base64 encoded file with a timestamped filename.
 
-These files can be opened and read by the merge utility. The merge utility uses Substrate to create
-proper chunk data and region files for minecraft. Running the create world or merge changes procedures
-should result in a world that is up-to-date.
+Source Directory Structure
+==========================
+The mod source files are in mod/ and are all Java
+The core library is in core/ and is C#.NET
+A basic WPF based gui is in wpf/ and is C#.NET
 
-The reason for this is the timestamp attached to each chunk that says exactly when it was last seen.
-This allows multiple people to run the mod and share their output files without overwriting each other's
-changes. This can be useful if, for example, you want to make a collaborative effort to map a SMP world.
+
+Using the Core Library
+======================
+There are two major objects to use: WorldBuilder and GeoReader.
+
+The GeoReader is an IEnumerable for the chunk data that is in the ".geosharer" files. You can use the "Attach()" method to add files to the GeoReader one at a time, and it will serve up chunks from all of them.
+
+The WorldBuilder is used to create/merge ".geosharer" chunk data into a new or existing world. Pass it the output directory path and a GeoReader object with ".geosharer" files attached, and it will merge that data into the world.

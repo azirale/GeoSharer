@@ -1,4 +1,4 @@
-package net.azirale.geosharer;
+package net.azirale.geosharer.mod;
 
 // Imports
 import java.lang.reflect.Field;

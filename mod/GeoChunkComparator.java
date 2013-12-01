@@ -1,4 +1,4 @@
-package net.azirale.geosharer;
+package net.azirale.geosharer.mod;
 
 import java.util.Comparator;
 

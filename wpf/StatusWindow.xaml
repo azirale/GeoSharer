@@ -1,0 +1,23 @@
+﻿<Window x:Name="StatusForm" x:Class="net.azirale.geosharer.wpf.StatusWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="StatusWindow" Height="118" Width="414"
+        WindowStyle="None"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        Topmost="True"
+        WindowStartupLocation="CenterOwner" Loaded="StatusForm_Loaded"
+        >
+    <Border BorderThickness="2" BorderBrush="LightGray">
+        <Grid>
+            <ProgressBar x:Name="StatusBar" Margin="10,0,10,20" Height="15" VerticalAlignment="Bottom"
+                     Value="{Binding Current, UpdateSourceTrigger=PropertyChanged, Mode=OneWay}"
+                     Maximum="{Binding Max, UpdateSourceTrigger=PropertyChanged, Mode=OneWay}"
+                     />
+            <Label x:Name="StatusLabel" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top" Width="388" HorizontalContentAlignment="Center" FontSize="16" Height="40"
+                   Content="{Binding LabelText, UpdateSourceTrigger=PropertyChanged, Mode=OneWay}"
+                   />
+
+        </Grid>
+    </Border>
+</Window>
