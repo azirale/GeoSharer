@@ -1,3 +1,5 @@
+/* Disabled until I figure out 172
+
 package net.azirale.geosharer.mod;
 
 import java.util.EnumSet;
@@ -58,3 +60,4 @@ public class GeoSharerKeybinder extends KeyHandler
 	}
 
 }
+/**/

@@ -1,8 +1,8 @@
-package net.azirale.geosharer.mod;
+/* Disabled while I figure this 172 nonsense out
+ package net.azirale.geosharer.mod;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.src.ModLoader;
 import net.minecraft.src.mod_Geosharer;
 import net.minecraft.world.World;
 import cpw.mods.fml.common.network.IGuiHandler;
@@ -33,7 +33,7 @@ public class GeoGuiHandler implements IGuiHandler
 
 	public void PopMenu()
 	{
-		Minecraft mc = ModLoader.getMinecraftInstance();
+		Minecraft mc = Minecraft.getMinecraft();
 		mc.thePlayer.openGui(mod_Geosharer.instance, GeoMenu.GUI_ID, null, 0, 0, 0);
 	}
 	
@@ -44,3 +44,4 @@ public class GeoGuiHandler implements IGuiHandler
 	}
 
 }
+/**/

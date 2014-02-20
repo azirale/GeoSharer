@@ -1,8 +1,8 @@
 package net.azirale.geosharer.mod;
 
 import java.util.Comparator;
-
-import net.minecraft.src.ModLoader;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.entity.EntityClientPlayerMP;
 
 class GeoChunkComparator implements Comparator<GeoSharerChunk>{
 	private int playerX;
@@ -10,11 +10,13 @@ class GeoChunkComparator implements Comparator<GeoSharerChunk>{
 	private boolean havePlayerCoords;
 	
 	public GeoChunkComparator(){
-		if (ModLoader.getMinecraftInstance().thePlayer == null) havePlayerCoords = false;
-		else {
+		EntityClientPlayerMP player = Minecraft.getMinecraft().thePlayer;
+		if (player == null) havePlayerCoords = false;
+		else
+		{
 			havePlayerCoords = true;
-			playerX = ModLoader.getMinecraftInstance().thePlayer.chunkCoordX;
-			playerZ = ModLoader.getMinecraftInstance().thePlayer.chunkCoordZ;
+			playerX = player.chunkCoordX;
+			playerZ = player.chunkCoordZ;
 		}
 	}
 	

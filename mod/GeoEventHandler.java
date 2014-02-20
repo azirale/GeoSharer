@@ -1,9 +1,7 @@
 package net.azirale.geosharer.mod;
 
-import net.minecraft.world.chunk.Chunk;
+import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.event.ForgeSubscribe;
-import net.minecraftforge.event.world.ChunkDataEvent;
 import net.minecraftforge.event.world.ChunkEvent;
 import net.minecraftforge.event.world.WorldEvent;
 
@@ -23,20 +21,23 @@ public class GeoEventHandler {
 		this.geoCore = core;
 	}
 	
-	@ForgeSubscribe
-	public void onChunkChange(ChunkEvent.Unload chunksave){
+	@SubscribeEvent
+	public void onChunkChange(ChunkEvent.Unload chunksave)
+	{
 		if (chunksave == null) return;
 		if (chunksave.getChunk() == null) return;
 		geoCore.addChunk(chunksave.getChunk());
 	}
 	
-	@ForgeSubscribe
-	public void onWorldLoad(WorldEvent.Load loading){
+	@SubscribeEvent
+	public void onWorldLoad(WorldEvent.Load loading)
+	{
 		geoCore.activate(loading.world);
 	}
 	
-	@ForgeSubscribe
-	public void onWorldUnload(WorldEvent.Unload unloading){
+	@SubscribeEvent
+	public void onWorldUnload(WorldEvent.Unload unloading)
+	{
 		geoCore.deactivate(unloading.world);
 	}
 }

@@ -1,3 +1,5 @@
+/* Disabled until I figure out more about 172
+
 package net.azirale.geosharer.mod;
 
 import net.minecraft.client.gui.GuiButton;
@@ -36,3 +38,4 @@ public class GeoMenu extends GuiScreen
         super.drawScreen(par1, par2, par3);
     }
 }
+/**/
