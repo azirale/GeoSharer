@@ -25,6 +25,15 @@ namespace net.azirale.geosharer.core
         private long timer3; // stitch chunks
         #endregion
 
+        /***** PUBLIC READ / PRIVATE WRITE PROPERTIES *******************************************/
+        #region Public Read / Private Write Properties
+        public int ChunksAdded { get; private set; }
+        public int ChunksUpdated { get; private set; }
+        public int ChunksIgnored { get; private set; }
+        public int ChunksFailed { get; private set; }
+        public TimeSpan TimeTaken { get; private set; }
+        #endregion
+
         /***** PUBLIC METHODS *******************************************************************/
         #region Public Methods
 
@@ -66,10 +75,6 @@ namespace net.azirale.geosharer.core
             level.GeneratorName = "Superflat"; // superflat for generated chunks if loaded in MC
             RegionChunkManager chunkManager = world.GetChunkManager();
             int i = 0; // counter for the number of chunks handled
-            int added = 0; // counter how many new chunks were added to the world
-            int updated = 0; // counter for how many existing chunks were updated
-            int skipped = 0; // counter for how many old chunks were skipped
-            int failed = 0; // counter for how many chunk updates were aborted due to an error
             this.SendMessage(MessageVerbosity.Normal, "Reading GeoSharer files...");
             ProgressWatcher watcher = new ProgressWatcher(geoReader, this);
             watcher.Start();
@@ -83,10 +88,10 @@ namespace net.azirale.geosharer.core
                 ChunkInsertResult thisResult = InsertChunk(addChunk, chunkManager);
                 switch (thisResult)
                 {
-                    case ChunkInsertResult.Added: ++added; break;
-                    case ChunkInsertResult.Updated: ++updated; break;
-                    case ChunkInsertResult.Skipped: ++skipped; break;
-                    case ChunkInsertResult.Failed: ++failed; break;
+                    case ChunkInsertResult.Added: ++this.ChunksAdded; break;
+                    case ChunkInsertResult.Updated: ++this.ChunksUpdated; break;
+                    case ChunkInsertResult.Skipped: ++this.ChunksIgnored; break;
+                    case ChunkInsertResult.Failed: ++this.ChunksFailed; break;
                     default: break;
                 }
                 ++i;
@@ -96,11 +101,16 @@ namespace net.azirale.geosharer.core
             this.timer1 = clock.ElapsedMilliseconds;
             watcher.Stop();
             this.SendProgress(geoReader.TotalLength, geoReader.TotalLength, geoReader.GetStatusText());
-            this.SendMessage(MessageVerbosity.Normal, "Finished reading file.\nAdded " + added + " new chunks.\nUpdated " + updated + " recent chunks.\nSkipped " + skipped + " old chunks.\nFailed on " + failed + " chunks.");
+            this.SendMessage(MessageVerbosity.Normal, "Finished reading file");
+            this.SendMessage(MessageVerbosity.Normal, "Added " + this.ChunksAdded + " chunks");
+            this.SendMessage(MessageVerbosity.Normal, "Updated " + this.ChunksUpdated + " chunks");
+            this.SendMessage(MessageVerbosity.Normal, "Ignored " + this.ChunksIgnored + " chunks");
+            this.SendMessage(MessageVerbosity.Normal, "Failed " + this.ChunksFailed + " chunks");
             this.SendMessage(MessageVerbosity.Normal, "Saving world files.");
             world.Save();
             this.SendMessage(MessageVerbosity.Normal, "Done.");
             bigclock.Stop();
+            this.TimeTaken = TimeSpan.FromMilliseconds(bigclock.ElapsedMilliseconds);
             this.SendMessage(MessageVerbosity.Debug, "Read chunk ms: " + this.timer1.ToString());
             this.SendMessage(MessageVerbosity.Debug, "Write blocks ms: " + this.timer2.ToString());
             this.SendMessage(MessageVerbosity.Debug, "Stich chunks ms: " + this.timer3.ToString());

@@ -176,9 +176,9 @@ namespace net.azirale.geosharer.core
             /// <returns>True if completed successfully, otherwise false</returns>
             public bool Parse(GeoChunk chunkOut, string textIn)
             {
-                return this.NBTDecode(chunkOut, textIn);
-
-
+                bool wasNBT = this.NBTDecode(chunkOut, textIn);
+                if (wasNBT) return wasNBT;
+                // not NBT format? Continue here...
                 // Convert the text to a byte array
                 byte[] bytes = TextToBytes(textIn);
                 if (bytes == null)
@@ -234,6 +234,7 @@ namespace net.azirale.geosharer.core
                 GZipStream unzip = new GZipStream(inStream,CompressionMode.Decompress);
                 NbtTree tree = new NbtTree(unzip);
                 TagNodeCompound root = tree.Root;
+                if (root == null) return false;
                 bool success = true;
                 int version, x, z, maxY;
                 long timestamp;

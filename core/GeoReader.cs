@@ -3,7 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
-using System.Net;
 using System.Text;
 
 namespace net.azirale.geosharer.core
@@ -102,7 +101,7 @@ namespace net.azirale.geosharer.core
         /// <returns></returns>
         public string GetStatusText()
         {
-            if (this.TotalLength == 0) return "No data to read;";
+            if (this.TotalLength == 0) return "No data to read";
             StringBuilder builder = new StringBuilder();
             builder.Append(ShortenedSize(CurrentPosition));
             builder.Append('/');
@@ -119,12 +118,12 @@ namespace net.azirale.geosharer.core
         /// <returns>Long </returns>
         private long Reverse(long value)
         {
-            return IPAddress.HostToNetworkOrder(value);
+            return Endian.Reverse(value);
         }
 
         private int Reverse(int value)
         {
-            return IPAddress.HostToNetworkOrder(value);
+            return Endian.Reverse(value);
         }
 
         /// <summary>
@@ -260,8 +259,8 @@ namespace net.azirale.geosharer.core
 
         #endregion
 
-
         /***** IMESSAGESENDER IMPLEMENTATION ****************************************************/
+        #region IMessageSender Implementation
         /// <summary>
         /// IMessageSender event to send a message to a subscribing object method
         /// </summary>
@@ -287,5 +286,6 @@ namespace net.azirale.geosharer.core
             Message msg = this.Messaging;
             if (msg != null) msg(this, new MessagePacket(verbosity, text));
         }
+        #endregion
     }
 }
