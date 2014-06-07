@@ -9,12 +9,12 @@ namespace net.azirale.geosharer.core
     public class GeoChunkRaw : IChunkSync
     {
         private GeoChunkMeta meta;
-        private byte[] data;
+        public byte[] Data { get; private set; }
 
         public GeoChunkRaw(GeoChunkMeta meta, byte[] data)
         {
             this.meta = meta;
-            this.data = data;
+            this.Data = data;
         }
 
         public int X
@@ -29,7 +29,7 @@ namespace net.azirale.geosharer.core
 
         public long TimeStamp
         {
-            get { return this.meta.Z; }
+            get { return this.meta.TimeStamp; }
         }
 
         public int RX { get { return (int)Math.Floor(this.X / 16D); } }
@@ -47,7 +47,14 @@ namespace net.azirale.geosharer.core
 
         public AnvilChunk GetAnvilChunk()
         {
-            MemoryStream ms = new MemoryStream(this.data);
+            
+            AnvilChunk value = AnvilChunk.Create(GetTree());
+            return value;
+        }
+
+        public TagNode GetTreeNode()
+        {
+            MemoryStream ms = new MemoryStream(this.Data);
             GZipStream zs = new GZipStream(ms, CompressionMode.Decompress);
             NbtTree tree = new NbtTree(zs);
             zs.Close();
@@ -71,9 +78,13 @@ namespace net.azirale.geosharer.core
             // hacky solution added in 172 due to change in NBTTagCompound in minecraft
             TagNodeCompound root = new TagNodeCompound();
             root.Add("Level", level);
-            NbtTree hacktree = new NbtTree(root);
-            AnvilChunk value = AnvilChunk.Create(hacktree);
-            return value;
+            return root as TagNode;
+        }
+
+        public NbtTree GetTree()
+        {
+            NbtTree hacktree = new NbtTree(GetTreeNode() as TagNodeCompound);
+            return hacktree;
         }
     }
 }

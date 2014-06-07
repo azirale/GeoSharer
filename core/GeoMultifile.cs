@@ -42,9 +42,13 @@ namespace net.azirale.geosharer.core
             return true;
         }
 
-        // Get Chunk Metadata
+        /// <summary>
+        /// Get all of the chunk metadata objects in the GeoMultifile Object. THIS METHOD IS MULTITHREADED
+        /// </summary>
+        /// <returns></returns>
         public List<GeoChunkMeta> GetChunkMetadata()
         {
+            this.SendMessage(MessageVerbosity.Verbose, "Acquiring all chunk metadata");
             CountdownEvent counter = new CountdownEvent(this.sourceFiles.Count);
             List<List<GeoChunkMeta>> allMeta = new List<List<GeoChunkMeta>>(this.sourceFiles.Count);
             foreach (FileInfo fi in this.sourceFiles)
@@ -68,24 +72,23 @@ namespace net.azirale.geosharer.core
         /// <returns></returns>
         public List<GeoChunkMeta> GetLatestChunkMeta()
         {
-            // Grab all the metadata to filter for the latest
+            Dictionary<long, GeoChunkMeta> dict = new Dictionary<long, GeoChunkMeta>();
             List<GeoChunkMeta> allMeta = this.GetChunkMetadata();
-            allMeta.Sort();
-            allMeta.Reverse();
-            // filter to just the most recent chunks
-            List<GeoChunkMeta> recentMeta = new List<GeoChunkMeta>();
             foreach (GeoChunkMeta each in allMeta)
             {
-                bool isDup = false;
-                foreach (GeoChunkMeta rec in recentMeta)
+                long index = ((long)(each.X) << 32) + (long)each.Z;
+                if (!dict.ContainsKey(index) || dict[index].TimeStamp < each.TimeStamp)
                 {
-                    isDup = rec.Equals(each);
-                    if (isDup) break;
+                    dict[index] = each;
                 }
-                if (!isDup) recentMeta.Add(each);
             }
-            return recentMeta;
+            this.SendMessage(MessageVerbosity.Normal, "Got " + allMeta.Count + " chunks");
+            this.SendMessage(MessageVerbosity.Normal, "Kept " + dict.Count + " chunks");
+            List<GeoChunkMeta> value = value = new List<GeoChunkMeta>(dict.Values);
+            return value;
         }
+        public int MetaCountTotal { get; private set; }
+        public int MetaCountKept { get; private set; }
 
         
         /// <summary>
@@ -103,8 +106,24 @@ namespace net.azirale.geosharer.core
             List<GeoChunkMeta> latestMeta = this.GetLatestChunkMeta();
             // We will return this
             List<GeoChunkRaw> value = new List<GeoChunkRaw>();
-
+            this.SendMessage(MessageVerbosity.Verbose, "Getting data");
             // Scan each file - if it contains data we need: extract it then add it to the return
+            CountdownEvent counter = new CountdownEvent(this.sourceFiles.Count);
+            List<List<GeoChunkRaw>> allRaw = new List<List<GeoChunkRaw>>(this.sourceFiles.Count);
+            foreach (FileInfo fi in this.sourceFiles)
+            {
+                List<GeoChunkRaw> fileRaw = new List<GeoChunkRaw>();
+                allRaw.Add(fileRaw);
+                ThreadPool.QueueUserWorkItem(new WaitCallback(GetLatestRaw), new GetLatestRawObject(counter, fi, fileRaw, latestMeta) );
+            }
+            counter.Wait();
+            foreach(List<GeoChunkRaw> eachRaw in allRaw)
+            {
+                value.AddRange(eachRaw);
+            }
+            return value;
+            // ORIGINAL
+            /*
             foreach (FileInfo fi in this.sourceFiles)
             {
                 List<GeoChunkMeta> thisFileMeta = new List<GeoChunkMeta>();
@@ -120,6 +139,41 @@ namespace net.azirale.geosharer.core
                 value.AddRange(gf.GetChunkData(thisFileMeta));
             }
             return value;
+            */
+        }
+
+        private void GetLatestRaw(object arg)
+        {
+            GetLatestRawObject value = arg as GetLatestRawObject;
+            if (value == null) throw new ArgumentException("GeoMultifile.GetLatestRaw did not get a GetLatestRawObject");
+
+            List<GeoChunkMeta> thisFileMeta = new List<GeoChunkMeta>();
+            for (int i = value.LatestMeta.Count - 1; i >= 0;--i)
+            {
+                if (value.LatestMeta[i].SourcePath == value.FI.FullName)
+                {
+                    thisFileMeta.Add(value.LatestMeta[i]);
+                    //value.LatestMeta.RemoveAt(i);
+                }
+            }
+            GeoFile gf = new GeoFile(value.FI.FullName);
+            value.Value.AddRange(gf.GetChunkData(thisFileMeta));
+            value.Counter.Signal();
+        }
+
+        private class GetLatestRawObject
+        {
+            public FileInfo FI { get; private set; }
+            public CountdownEvent Counter { get; private set; }
+            public List<GeoChunkRaw> Value { get; private set; }
+            public List<GeoChunkMeta> LatestMeta { get; private set; }
+            public GetLatestRawObject(CountdownEvent counter, FileInfo fi, List<GeoChunkRaw> value, List<GeoChunkMeta> latestMeta)
+            {
+                this.FI = fi;
+                this.Counter = counter;
+                this.Value = value;
+                this.LatestMeta = latestMeta;
+            }
         }
 
 
@@ -179,10 +233,15 @@ namespace net.azirale.geosharer.core
             return this.Messaging;
         }
 
-        private void ErrorMessage(string text)
+        private void SendMessage(MessageVerbosity verbosity, string text)
         {
             Message msg = this.Messaging;
-            msg(this, new MessagePacket(MessageVerbosity.Error, text));
+            if (msg != null) msg(this, new MessagePacket(MessageVerbosity.Error, text));
+        }
+
+        private void ErrorMessage(string text)
+        {
+            this.SendMessage(MessageVerbosity.Error, text);
         }
         #endregion
     }

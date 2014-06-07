@@ -109,6 +109,9 @@ namespace net.azirale.geosharer.wpf
             StatusWindow status = new StatusWindow(worker, builder);
             status.Owner = this;
             status.ShowDialog();
+            ReportWindow report = new ReportWindow(builder);
+            report.Owner = this;
+            report.ShowDialog();
         }
     }
 }

@@ -8,6 +8,10 @@ namespace net.azirale.geosharer.core
 {
     public class GeoWorldWriter : IMessageSender, IProgressSender
     {
+        public int Added { get;  private set; }
+        public int Updated { get; private set; }
+        public int Skipped { get; private set; }
+
         public void UpdateWorld(string worldPath, List<GeoChunkRaw> chunks)
         {
             if (!this.CreateOrLoadWorld(worldPath)) return;
@@ -16,6 +20,11 @@ namespace net.azirale.geosharer.core
             // Break chunks into regions for better disk access
             List<GeoRegion> regions = this.GetRegionBreakout(chunks);
             RegionChunkManager rcm = world.GetChunkManager();
+            long total = chunks.Count;
+            long current = 0;
+            this.Added = 0;
+            this.Updated = 0;
+            this.Skipped = 0;
             foreach (GeoRegion region in regions)
             {
                 foreach (GeoChunkRaw chunk in region.Chunks)
@@ -28,22 +37,65 @@ namespace net.azirale.geosharer.core
                         if (level.ContainsKey("GeoTimestamp"))
                         {
                             long existingTimestamp = level["GeoTimestamp"].ToTagLong().Data;
-                            if (existingTimestamp >= chunk.TimeStamp) continue;
+                            if (existingTimestamp > chunk.TimeStamp) { this.Skipped++; continue; }
                         }
+                        this.Updated++;
                     }
-                    ChunkRef cr = rcm.SetChunk(chunk.X, chunk.Z, chunk.GetAnvilChunk());
+                    else
+                    {
+                        this.Added++;
+                    }
+                    AnvilChunk ac = chunk.GetAnvilChunk();
+                    rcm.DeleteChunk(chunk.X, chunk.Z);
+                    rcm.SetChunk(chunk.X, chunk.Z, ac);
+                    ChunkRef cr = rcm.GetChunkRef(chunk.X, chunk.Z);
                     AlphaBlockCollection blocks = cr.Blocks;
-                    blocks.RebuildHeightMap();
-                    blocks.RebuildFluid();
-                    blocks.RebuildBlockLight();
-                    blocks.RebuildSkyLight();
-                    blocks.StitchBlockLight();
-                    blocks.StitchSkyLight();
+                    try
+                    {
+                        blocks.RebuildHeightMap();
+                        blocks.RebuildFluid();
+                        blocks.RebuildBlockLight();
+                        blocks.RebuildSkyLight();
+                    }
+                    catch (Exception ex)
+                    {
+                        this.SendMessage(MessageVerbosity.Error, "Exception rebuilding height/fluid/lighting for Chunk X=" + chunk.X + " Y=" + chunk.Z + " in GeoWorldWriter.UpdateWorld, rethrowing: " + ex.Message);
+                    }
+                    try
+                    {
+                        blocks.StitchBlockLight();
+                        blocks.StitchSkyLight();
+                    }
+                    catch (Exception ex)
+                    {
+                        this.SendMessage(MessageVerbosity.Error, "Exception stitching lighting for Chunk X=" + chunk.X + " Y=" + chunk.Z +  " in GeoWorldWriter.UpdateWorld, rethrowing: " + ex.Message);
+                    }
+                    current++;
+                    this.SendProgress(current, total, "Done chunk X=" + chunk.X + " Z=" + chunk.Z);
                 }
-                rcm.Save(); // save to disk, we are done with this region
+                //rcm.RelightDirtyChunks(); // object reference not set?
+                try
+                {
+                    this.SendMessage(MessageVerbosity.Normal, "Saving Region");
+                    rcm.Save(); // save to disk, we are done with this region
+                }
+                catch (Exception ex)
+                {
+                    this.SendMessage(MessageVerbosity.Error, "Exception saving region in GeoWorldWriter.UpdateWorld, rethrowing: " + ex.Message);
+                    throw;
+                }
             }
             // all regions done
-            world.Save();
+            try
+            {
+                this.SendMessage(MessageVerbosity.Normal, "Saving World");
+                world.Save();
+            }
+            catch (Exception ex)
+            {
+                this.SendMessage(MessageVerbosity.Error, "Exception saving world in GeoWorldWriter.UpdateWorld; rethrowing: " + ex.Message);
+                throw;
+            }
         }
 
         private void SetWorldDefaults(AnvilWorld world)
@@ -56,7 +108,7 @@ namespace net.azirale.geosharer.core
             level.GameRules.MobGriefing = false; // no creeper damage to environment
             level.GameType = GameType.CREATIVE; // creative mode
             level.LastPlayed = (long)(DateTime.UtcNow - new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc)).TotalMilliseconds; // update the last played time, java style
-            level.GeneratorName = "Superflat"; // superflat for generated chunks if loaded in MC
+            level.GeneratorName = "flat"; // superflat for generated chunks if loaded in MC
         }
 
         private List<GeoRegion> GetRegionBreakout(List<GeoChunkRaw> chunks)

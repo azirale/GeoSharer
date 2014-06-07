@@ -54,6 +54,12 @@ namespace net.azirale.geosharer.core
             get { return this.sourcePath; }
         }
 
+        public override bool Equals(object obj)
+        {
+            GeoChunkMeta other = obj as GeoChunkMeta;
+            return (other != null && this.Equals(other));
+        }
+
         public bool Equals(IChunkSync other)
         {
             return this.x == other.X && this.z == other.Z;
