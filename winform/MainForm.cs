@@ -152,7 +152,7 @@ namespace GeoSharerWinForm
                     bool isOk = gmf.AttachFile(s);
                     if (!isOk) MessageOut("Input file '" + s + "' failed. Wrong version or filetype?");
                 }
-                List<GeoChunkRaw> rawData = gmf.GetLatestChunkData();
+                List<GeoChunkRaw> rawData = gmf.GetLatestChunkData(this.UpToDatePicker.Value);
                 GeoWorldWriter gww = new GeoWorldWriter();
                 gww.Progressing += ReceiveProgress;
                 gww.UpdateWorld(outputDirectoryPath, rawData);
@@ -274,6 +274,54 @@ namespace GeoSharerWinForm
             {
                 MessageBox.Show("Woah, secondary exception total failure\n" + ex2.Message);
             }
+        }
+
+        private void MainForm_DragEnter(object sender, DragEventArgs e)
+        {
+            e.Effect = DragDropEffects.None;
+            if (e.Data.GetDataPresent(DataFormats.FileDrop))
+            {
+                string[] droppedPaths = e.Data.GetData(DataFormats.FileDrop) as string[];
+                if (droppedPaths.Length == 1 && Directory.Exists(droppedPaths[0]))
+                {
+                    e.Effect = DragDropEffects.Copy;
+                }
+                else foreach (string path in droppedPaths)
+                    {
+                        if (path.EndsWith(".geosharer"))
+                        {
+                            e.Effect = DragDropEffects.Copy;
+                            break;
+                        }
+                    }
+            }
+        }
+
+        private void MainForm_DragDrop(object sender, DragEventArgs e)
+        {
+            string[] droppedPaths = e.Data.GetData(DataFormats.FileDrop) as string[];
+            if (droppedPaths.Length == 1 && Directory.Exists(droppedPaths[0]))
+            {
+                DropDirectory(droppedPaths[0]);
+            }
+            else
+            {
+                DropFiles(droppedPaths);
+            }
+        }
+
+        private void DropDirectory(string directoryPath)
+        {
+            this.OutputFolderText.Text = directoryPath;
+        }
+
+        private void DropFiles(string[] filePaths)
+        {
+            foreach (string filePath in filePaths)
+            {
+                if (filePath.EndsWith(".geosharer")) this.inputFilePaths.Add(filePath);
+            }
+            this.listBox1.DataSource = this.inputFilePaths.ToList<string>();
         }
     }
 }

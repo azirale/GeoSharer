@@ -48,6 +48,8 @@
             this.mergeToWorldToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.createTrimmedDatafileToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.exitToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.UpToDatePicker = new System.Windows.Forms.DateTimePicker();
+            this.label1 = new System.Windows.Forms.Label();
             this.PanelA.SuspendLayout();
             this.PanelB.SuspendLayout();
             this.tableLayoutPanel2.SuspendLayout();
@@ -88,12 +90,16 @@
             this.tableLayoutPanel2.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
             this.tableLayoutPanel2.Controls.Add(this.OutputFolderLabel, 0, 0);
             this.tableLayoutPanel2.Controls.Add(this.OutputFolderText, 0, 1);
-            this.tableLayoutPanel2.Controls.Add(this.listBox1, 0, 3);
-            this.tableLayoutPanel2.Controls.Add(this.label2, 0, 2);
+            this.tableLayoutPanel2.Controls.Add(this.listBox1, 0, 5);
+            this.tableLayoutPanel2.Controls.Add(this.label2, 0, 4);
+            this.tableLayoutPanel2.Controls.Add(this.UpToDatePicker, 0, 3);
+            this.tableLayoutPanel2.Controls.Add(this.label1, 0, 2);
             this.tableLayoutPanel2.Dock = System.Windows.Forms.DockStyle.Fill;
             this.tableLayoutPanel2.Location = new System.Drawing.Point(3, 3);
             this.tableLayoutPanel2.Name = "tableLayoutPanel2";
-            this.tableLayoutPanel2.RowCount = 4;
+            this.tableLayoutPanel2.RowCount = 6;
+            this.tableLayoutPanel2.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 17F));
+            this.tableLayoutPanel2.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 27F));
             this.tableLayoutPanel2.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 17F));
             this.tableLayoutPanel2.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 27F));
             this.tableLayoutPanel2.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 17F));
@@ -124,19 +130,19 @@
             this.listBox1.Dock = System.Windows.Forms.DockStyle.Fill;
             this.listBox1.FormattingEnabled = true;
             this.listBox1.IntegralHeight = false;
-            this.listBox1.Location = new System.Drawing.Point(3, 64);
+            this.listBox1.Location = new System.Drawing.Point(3, 108);
             this.listBox1.Name = "listBox1";
-            this.listBox1.Size = new System.Drawing.Size(355, 437);
+            this.listBox1.Size = new System.Drawing.Size(355, 393);
             this.listBox1.TabIndex = 3;
             // 
             // label2
             // 
             this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(3, 44);
+            this.label2.Location = new System.Drawing.Point(3, 88);
             this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(35, 13);
+            this.label2.Size = new System.Drawing.Size(55, 13);
             this.label2.TabIndex = 4;
-            this.label2.Text = "label2";
+            this.label2.Text = "Input Files";
             // 
             // richTextBox1
             // 
@@ -247,8 +253,28 @@
             this.exitToolStripMenuItem.Text = "Exit";
             this.exitToolStripMenuItem.Click += new System.EventHandler(this.exitToolStripMenuItem_Click);
             // 
+            // UpToDatePicker
+            // 
+            this.UpToDatePicker.CustomFormat = "D: yyyy-MM-dd    T: HH:mm:ss";
+            this.UpToDatePicker.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.UpToDatePicker.Format = System.Windows.Forms.DateTimePickerFormat.Custom;
+            this.UpToDatePicker.Location = new System.Drawing.Point(3, 64);
+            this.UpToDatePicker.Name = "UpToDatePicker";
+            this.UpToDatePicker.Size = new System.Drawing.Size(355, 20);
+            this.UpToDatePicker.TabIndex = 5;
+            // 
+            // label1
+            // 
+            this.label1.AutoSize = true;
+            this.label1.Location = new System.Drawing.Point(3, 44);
+            this.label1.Name = "label1";
+            this.label1.Size = new System.Drawing.Size(106, 13);
+            this.label1.TabIndex = 6;
+            this.label1.Text = "Up to Date and Time";
+            // 
             // MainForm
             // 
+            this.AllowDrop = true;
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(784, 562);
@@ -260,6 +286,8 @@
             this.Name = "MainForm";
             this.Text = "GeoSharer Utility";
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.MainForm_FormClosing);
+            this.DragDrop += new System.Windows.Forms.DragEventHandler(this.MainForm_DragDrop);
+            this.DragEnter += new System.Windows.Forms.DragEventHandler(this.MainForm_DragEnter);
             this.PanelA.ResumeLayout(false);
             this.PanelB.ResumeLayout(false);
             this.tableLayoutPanel2.ResumeLayout(false);
@@ -295,6 +323,8 @@
         private System.Windows.Forms.ToolStripMenuItem processToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem mergeToWorldToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem createTrimmedDatafileToolStripMenuItem;
+        private System.Windows.Forms.DateTimePicker UpToDatePicker;
+        private System.Windows.Forms.Label label1;
     }
 }
 

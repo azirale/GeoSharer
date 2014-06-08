@@ -72,12 +72,18 @@ namespace net.azirale.geosharer.core
         /// <returns></returns>
         public List<GeoChunkMeta> GetLatestChunkMeta()
         {
+            return this.GetLatestChunkMeta(DateTime.UtcNow);
+        }
+        
+        public List<GeoChunkMeta> GetLatestChunkMeta(DateTime upToDate)
+        {
             Dictionary<long, GeoChunkMeta> dict = new Dictionary<long, GeoChunkMeta>();
             List<GeoChunkMeta> allMeta = this.GetChunkMetadata();
+            long upToTimestamp = (long)((upToDate - new DateTime(1970, 1, 1, 0, 0, 0)).TotalMilliseconds);
             foreach (GeoChunkMeta each in allMeta)
             {
                 long index = ((long)(each.X) << 32) + (long)each.Z;
-                if (!dict.ContainsKey(index) || dict[index].TimeStamp < each.TimeStamp)
+                if (each.TimeStamp < upToTimestamp && (!dict.ContainsKey(index) || dict[index].TimeStamp < each.TimeStamp))
                 {
                     dict[index] = each;
                 }
@@ -102,8 +108,13 @@ namespace net.azirale.geosharer.core
         /// </returns>
         public List<GeoChunkRaw> GetLatestChunkData()
         {
+            return this.GetLatestChunkData(DateTime.UtcNow);
+        }
+
+        public List<GeoChunkRaw> GetLatestChunkData(DateTime upToDate)
+        {
             // Get only the most recent chunk data
-            List<GeoChunkMeta> latestMeta = this.GetLatestChunkMeta();
+            List<GeoChunkMeta> latestMeta = this.GetLatestChunkMeta(upToDate);
             // We will return this
             List<GeoChunkRaw> value = new List<GeoChunkRaw>();
             this.SendMessage(MessageVerbosity.Verbose, "Getting data");
