@@ -18,7 +18,7 @@ namespace net.azirale.geosharer.core
             AnvilWorld world = AnvilWorld.Create(worldPath);
             SetWorldDefaults(world);
             // Break chunks into regions for better disk access
-            List<GeoRegion> regions = this.GetRegionBreakout(chunks);
+            IEnumerable<GeoRegion> regions = this.GetRegionBreakout(chunks);
             RegionChunkManager rcm = world.GetChunkManager();
             long total = chunks.Count;
             long current = 0;
@@ -111,30 +111,34 @@ namespace net.azirale.geosharer.core
             level.GeneratorName = "flat"; // superflat for generated chunks if loaded in MC
         }
 
-        private List<GeoRegion> GetRegionBreakout(List<GeoChunkRaw> chunks)
+        private IEnumerable<GeoRegion> GetRegionBreakout(List<GeoChunkRaw> chunks)
         {
-            List<GeoRegion> regions = new List<GeoRegion>();
-            for (int i = chunks.Count-1; i >= 0; --i)
+            Dictionary<Tuple<int,int>,GeoRegion> regions = new Dictionary<Tuple<int,int>,GeoRegion>();
+            for (int i = 0; i < chunks.Count; ++i)
             {
-                bool inserted = false;
+                //bool inserted = false;
                 GeoChunkRaw chunk = chunks[i];
-                foreach (GeoRegion region in regions)
-                {
-                    if (chunk.RX == region.X && chunk.RZ == region.Z)
-                    {
-                        region.Chunks.Add(chunk);
-                        inserted = true;
-                        continue;
-                    }
-                }
-                if (!inserted)
-                {
-                    GeoRegion region = new GeoRegion(chunk.RX, chunk.RZ);
-                    region.Chunks.Add(chunk);
-                    regions.Add(region);
-                }
+                Tuple<int, int> regionCode = new Tuple<int, int>(chunk.RX, chunk.RZ);
+                GeoRegion region;
+                if (!regions.TryGetValue(regionCode, out region)) { region = new GeoRegion(regionCode.Item1, regionCode.Item2); regions[regionCode] = region; }
+                region.Chunks.Add(chunk);
+                //foreach (GeoRegion region in regions)
+                //{
+                //    if (chunk.RX == region.X && chunk.RZ == region.Z)
+                //    {
+                //        region.Chunks.Add(chunk);
+                //        inserted = true;
+                //        continue;
+                //    }
+                //}
+                //if (!inserted)
+                //{
+                //    GeoRegion region = new GeoRegion(chunk.RX, chunk.RZ);
+                //    region.Chunks.Add(chunk);
+                //    regions.Add(region);
+                //}
             }
-            return regions;
+            return regions.Values;
         }
 
         private bool CreateOrLoadWorld(string worldPath)

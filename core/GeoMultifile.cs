@@ -115,8 +115,6 @@ namespace net.azirale.geosharer.core
         {
             // Get only the most recent chunk data
             List<GeoChunkMeta> latestMeta = this.GetLatestChunkMeta(upToDate);
-            // We will return this
-            List<GeoChunkRaw> value = new List<GeoChunkRaw>();
             this.SendMessage(MessageVerbosity.Verbose, "Getting data");
             // Scan each file - if it contains data we need: extract it then add it to the return
             CountdownEvent counter = new CountdownEvent(this.sourceFiles.Count);
@@ -128,29 +126,20 @@ namespace net.azirale.geosharer.core
                 ThreadPool.QueueUserWorkItem(new WaitCallback(GetLatestRaw), new GetLatestRawObject(counter, fi, fileRaw, latestMeta) );
             }
             counter.Wait();
+            this.SendMessage(MessageVerbosity.Normal, "Grabbed data. Merging to single list");
+            // We will return this
+            List<GeoChunkRaw> value;
+            int totalDistinctChunks = 0;
+            for (int i=0;i<allRaw.Count;++i)
+            {
+                totalDistinctChunks += allRaw[i].Count;
+            }
+            value = new List<GeoChunkRaw>(totalDistinctChunks);
             foreach(List<GeoChunkRaw> eachRaw in allRaw)
             {
                 value.AddRange(eachRaw);
             }
             return value;
-            // ORIGINAL
-            /*
-            foreach (FileInfo fi in this.sourceFiles)
-            {
-                List<GeoChunkMeta> thisFileMeta = new List<GeoChunkMeta>();
-                for (int i = latestMeta.Count - 1; i >= 0; --i)
-                {
-                    if (latestMeta[i].SourcePath == fi.FullName)
-                    {
-                        thisFileMeta.Add(latestMeta[i]);
-                        latestMeta.RemoveAt(i);
-                    }
-                }
-                GeoFile gf = new GeoFile(fi.FullName);
-                value.AddRange(gf.GetChunkData(thisFileMeta));
-            }
-            return value;
-            */
         }
 
         private void GetLatestRaw(object arg)

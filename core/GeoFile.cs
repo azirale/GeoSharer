@@ -51,38 +51,51 @@ namespace net.azirale.geosharer.core
             return value;
         }
 
-        public List<GeoChunkRaw> GetChunkData(List<GeoChunkMeta> chunks)
+        public GeoChunkRaw[] GetChunkData(List<GeoChunkMeta> chunks)
         {
             if (!File.Exists(this.filePath)) return null;
             FileStream fs = File.OpenRead(filePath);
             GZipStream zs = new GZipStream(fs, CompressionMode.Decompress);
-            MemoryStream ms = new MemoryStream();
-            bool eof = false;
-            while (!eof)
+            chunks.Sort((x, y) => x.DataStart.CompareTo(y.DataStart));
+            int nextBytePosition = 0;
+            GeoChunkRaw[] value = new GeoChunkRaw[chunks.Count];
+            for (int i = 0; i < chunks.Count;++i)
             {
-                byte[] buffer = new byte[1024];
-                int bytes = zs.Read(buffer, 0, 1024);
-                eof = bytes < 1024;
-                ms.Write(buffer, 0, bytes);
+                if (chunks[i].SourcePath != this.filePath) throw new ArgumentException("GeoFile.GetChunkData: Asked for chunk from a different file");
+                int jumpDistance = chunks[i].DataStart - nextBytePosition;
+                if (jumpDistance > 0)
+                {
+                    Jump(zs, jumpDistance);
+                    nextBytePosition += jumpDistance;
+                }
+                byte[] chunkdata;
+                if (chunks[i].DataEnd == -1)
+                {
+                    using (MemoryStream ms = new MemoryStream())
+                    {
+                        zs.CopyTo(ms);
+                        chunkdata = new byte[ms.Length];
+                        ms.Read(chunkdata, 0, (int)ms.Length);
+                    }
+                }
+                else
+                {
+                    int length = chunks[i].DataEnd - chunks[i].DataStart;
+                    chunkdata = new byte[length];
+                    zs.Read(chunkdata, 0, length);
+                    nextBytePosition += length;
+                }
+                value[i] = new GeoChunkRaw(chunks[i], chunkdata);
             }
-            zs.Close();
-            fs.Close();
             zs.Dispose();
             fs.Dispose();
-
-            List<GeoChunkRaw> value = new List<GeoChunkRaw>(chunks.Count);
-            foreach (GeoChunkMeta meta in chunks)
-            {
-                if (meta.SourcePath != this.filePath) throw new ArgumentException("GeoFile.GetChunkData: Asked for chunk from a different file");
-                int length = (int)(meta.DataEnd == -1 ? ms.Length : meta.DataEnd) - meta.DataStart + 1;
-                byte[] chunkdata = new byte[length];
-                ms.Position = meta.DataStart;
-                ms.Read(chunkdata, 0, length);
-                value.Add(new GeoChunkRaw(meta, chunkdata));
-            }
-            ms.Close();
-            ms.Dispose();
             return value;
+        }
+
+        private void Jump(GZipStream zs, int distance)
+        {
+            byte[] dump = new byte[distance];
+            zs.Read(dump, 0, distance);
         }
     }
 }
