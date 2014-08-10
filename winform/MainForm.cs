@@ -44,19 +44,25 @@ namespace GeoSharerWinForm
             MessageOut(msg.Text);
         }
 
+        private const int maxMessages = 20;
+        private string[] messages = new string[maxMessages];
+        int lastMessageIndex = 0;
         private void MessageOut(string message)
         {
-            //outputText.AppendLine(message);
-            //this.richTextBox1.Text = outputText.ToString();
             this.Invoke((MethodInvoker)delegate
             {
+                for (int i = 9; i > 0; i--)
+                {
+                    this.messages[i] = this.messages[i - 1];
+                }
+                this.messages[maxMessages - 1] = message;
+                StringBuilder sb = new StringBuilder();
+                for (int i = maxMessages - 1; i >= 0; i--)
+                {
+                    sb.AppendLine(this.messages[i]);
+                }
                 this.richTextBox1.Focus();
-                string s = outputText.ToString();
-                this.richTextBox1.AppendText(message + "\n");
-                this.richTextBox1.SelectionStart = this.richTextBox1.Text.Length;
-                this.richTextBox1.SelectionLength = 0;
-                this.richTextBox1.ScrollToCaret();
-                this.richTextBox1.Refresh();
+                this.richTextBox1.Text = sb.ToString();
             });
         }
 
@@ -126,7 +132,9 @@ namespace GeoSharerWinForm
         {
             try
             {
-                new Thread(new ThreadStart(MergeCreate)).Start();
+                Thread workerThread = new Thread(new ThreadStart(MergeCreate));
+                workerThread.Name = "UICallMergeCreateWorld";
+                workerThread.Start();
             }
             catch (Exception ex)
             {
@@ -135,6 +143,16 @@ namespace GeoSharerWinForm
         }
 
         private void MergeCreate()
+        {
+            this.MergeCreate(true, true, true);
+        }
+
+        private void MergeCreateFast()
+        {
+            this.MergeCreate(false, false, false);
+        }
+
+        private void MergeCreate(bool doLighting, bool doFluid, bool doStitching)
         {
             try
             {
@@ -155,7 +173,7 @@ namespace GeoSharerWinForm
                 List<GeoChunkRaw> rawData = gmf.GetLatestChunkData(this.UpToDatePicker.Value);
                 GeoWorldWriter gww = new GeoWorldWriter();
                 gww.Progressing += ReceiveProgress;
-                gww.UpdateWorld(outputDirectoryPath, rawData);
+                gww.UpdateWorld(outputDirectoryPath, rawData, doFluid, doLighting, doStitching);
                 MessageOut("Added " + gww.Added + " chunks");
                 MessageOut("Updated " + gww.Updated + " chunks");
                 MessageOut("Run command complete.");
@@ -179,45 +197,52 @@ namespace GeoSharerWinForm
         #region Trimming
         private void createTrimmedDatafileToolStripMenuItem_Click(object sender, EventArgs e)
         {
+            Thread workerThread = new Thread(this.TrimFiles);
+            workerThread.Name = "UITrimFilesCall";
+            workerThread.Start();
+        }
+
+        public void TrimFiles()
+        {
             try
             {
-                TrimFiles();
+                this.busy = true;
+                this.StatusMessagelabel.Text = "Trimming files";
+                Stopwatch clock = new Stopwatch();
+                clock.Start();
+                List<FileInfo> files = new List<FileInfo>();
+                foreach (string filePath in this.inputFilePaths)
+                {
+                    FileInfo file = new FileInfo(filePath);
+                    files.Add(file);
+                }
+                GeoMultifile gmf = new GeoMultifile();
+                gmf.Messaging += ReceiveMessage;
+                StringBuilder report = new StringBuilder();
+                MessageOut("Adding files...");
+                foreach (FileInfo fi in files)
+                {
+                    if (!gmf.AttachFile(fi.FullName)) report.AppendLine("File \"" + fi.FullName + "\" not valid - different version?");
+                    else report.AppendLine("    Added file \"" + fi.FullName + "\"");
+                }
+                if (files.Count == 0) { MessageOut("No files to trim."); return; }
+                MessageOut(report.ToString());
+                MessageOut("Getting latest data for each chunk");
+                List<GeoChunkRaw> chunks = gmf.GetLatestChunkData();
+                MessageOut("Got " + chunks.Count + " up-to-date chunks");
+                TrimWriteChunks(this.outputDirectoryPath, chunks);
+                clock.Stop();
+                MessageOut("Trim Complete in " + clock.ElapsedMilliseconds.ToString("#,##0") + " ms");
+                this.StatusMessagelabel.Text = "Ready";
             }
             catch (Exception ex)
             {
                 ExceptionDump(ex);
             }
-        }
-
-        public void TrimFiles()
-        {
-            this.StatusMessagelabel.Text = "Trimming files";
-            Stopwatch clock = new Stopwatch();
-            clock.Start();
-            List<FileInfo> files = new List<FileInfo>();
-            foreach (string filePath in this.inputFilePaths)
+            finally
             {
-                FileInfo file = new FileInfo(filePath);
-                files.Add(file);
+                this.busy = false;
             }
-            GeoMultifile gmf = new GeoMultifile();
-            gmf.Messaging += ReceiveMessage;
-            StringBuilder report = new StringBuilder();
-            MessageOut("Adding files...");
-            foreach (FileInfo fi in files)
-            {
-                if (!gmf.AttachFile(fi.FullName)) report.AppendLine("File \"" + fi.FullName + "\" not valid - different version?");
-                else report.AppendLine("    Added file \"" + fi.FullName + "\"");
-            }
-            if (files.Count == 0) { MessageOut("No files to trim."); return; }
-            MessageOut(report.ToString());
-            MessageOut("Getting latest data for each chunk");
-            List<GeoChunkRaw> chunks = gmf.GetLatestChunkData();
-            MessageOut("Got " + chunks.Count + " up-to-date chunks");
-            TrimWriteChunks(this.outputDirectoryPath, chunks);
-            clock.Stop();
-            MessageOut("Trim Complete in " + clock.ElapsedMilliseconds.ToString("#,##0") + " ms");
-            this.StatusMessagelabel.Text = "Ready";
         }
 
         public void TrimWriteChunks(string directoryPath, List<GeoChunkRaw> chunks)
@@ -322,6 +347,62 @@ namespace GeoSharerWinForm
                 if (filePath.EndsWith(".geosharer")) this.inputFilePaths.Add(filePath);
             }
             this.listBox1.DataSource = this.inputFilePaths.ToList<string>();
+        }
+
+        private void mergeCreateFastToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                Thread workerThread = new Thread(new ThreadStart(MergeCreateFast));
+                workerThread.Name = "UICallMergeCreateWorldFast";
+                workerThread.Start();
+            }
+            catch (Exception ex)
+            {
+                ExceptionDump(ex);
+            }
+        }
+
+        private void recalculateWorldToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                Thread workerThread = new Thread(new ThreadStart(Recalculation));
+                workerThread.Name = "UICallRecalculation";
+                workerThread.Start();
+            }
+            catch (Exception ex)
+            {
+                ExceptionDump(ex);
+            }
+        }
+
+        private void Recalculation()
+        {
+            try
+            {
+                this.Invoke((MethodInvoker)delegate
+                    {
+                        this.busy = true;
+                        this.UseWaitCursor = true;
+                        this.Cursor = Cursors.WaitCursor;
+                        this.StatusMessagelabel.Text = "Recalculating World";
+                    });
+                GeoWorldWriter gww = new GeoWorldWriter();
+                gww.Progressing += ReceiveProgress;
+                gww.RecalculateWorld(outputDirectoryPath, true, true, true);
+                this.Invoke((MethodInvoker)delegate
+                {
+                    this.busy = false;
+                    this.UseWaitCursor = false;
+                    this.Cursor = Cursors.Default;
+                    this.StatusMessagelabel.Text = "Ready";
+                });
+            }
+            catch (Exception ex)
+            {
+                ExceptionDump(ex);
+            }
         }
     }
 }

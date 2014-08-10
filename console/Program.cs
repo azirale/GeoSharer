@@ -34,7 +34,8 @@ namespace net.azirale.geosharer.console
             AddCommandAliases(WorldSelect.Command, "world", "w");
             AddCommandAliases(Stats.Command, "stats", "s");
             AddCommandAliases(Merge.Command, "merge", "m");
-            AddCommandAliases(CommandExit, "exit", "quit", "q");
+            AddCommandAliases(Recalculate.Command, "recalculate", "recalc", "r");
+            AddCommandAliases(CommandExit, "exit", "quit", "q", "x");
         }
 
         private static void AddCommandAliases(Command command, params string[] aliases)

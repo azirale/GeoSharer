@@ -24,11 +24,15 @@ namespace net.azirale.geosharer.console
             StringBuilder msg = new StringBuilder();
             msg.AppendLine("Commands available...");
             msg.AppendLine("help - Shows this list of commands");
-            msg.AppendLine("add [Directory/Files*] - Add files for processing. Filename wildcards acceptable");
-            msg.AppendLine("out [Directory] - Set output directory to merge data into");
-            msg.AppendLine("list - Write to screen the current output and inputs");
-            msg.AppendLine("stats - Shows number of regions and chunks in the set output directory");
-            msg.AppendLine("run - Execute the merge process with the current output and inputs");
+            msg.AppendLine("input [Directory/Files*] - Set geosharer files for input");
+            msg.AppendLine("world [Directory] - Sets the directory for the world save to work with");
+            msg.AppendLine("stats - Shows number of regions and chunks in the set world save");
+            msg.AppendLine("merge - Execute the merge process with the current output and inputs");
+            msg.AppendLine("      - Has optional argument tags that can be combined");
+            msg.AppendLine("        l : disables lighting updates (slightly faster)");
+            msg.AppendLine("        f : disables fluid recalculation (slightly faster)");
+            msg.AppendLine("        s : disables chunk stitching calculations (significantly faster)");
+            msg.AppendLine("        Example: 'merge lfs'");
             msg.AppendLine("exit - Exits the GeoSharer Merge program");
             return msg.ToString();
         }

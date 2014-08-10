@@ -35,6 +35,8 @@
             this.OutputFolderText = new System.Windows.Forms.TextBox();
             this.listBox1 = new System.Windows.Forms.ListBox();
             this.label2 = new System.Windows.Forms.Label();
+            this.UpToDatePicker = new System.Windows.Forms.DateTimePicker();
+            this.label1 = new System.Windows.Forms.Label();
             this.richTextBox1 = new System.Windows.Forms.RichTextBox();
             this.statusStrip1 = new System.Windows.Forms.StatusStrip();
             this.StatusSpringlabel = new System.Windows.Forms.ToolStripStatusLabel();
@@ -48,8 +50,8 @@
             this.mergeToWorldToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.createTrimmedDatafileToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.exitToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.UpToDatePicker = new System.Windows.Forms.DateTimePicker();
-            this.label1 = new System.Windows.Forms.Label();
+            this.mergeCreateFastToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.recalculateWorldToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.PanelA.SuspendLayout();
             this.PanelB.SuspendLayout();
             this.tableLayoutPanel2.SuspendLayout();
@@ -144,6 +146,25 @@
             this.label2.TabIndex = 4;
             this.label2.Text = "Input Files";
             // 
+            // UpToDatePicker
+            // 
+            this.UpToDatePicker.CustomFormat = "D: yyyy-MM-dd    T: HH:mm:ss";
+            this.UpToDatePicker.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.UpToDatePicker.Format = System.Windows.Forms.DateTimePickerFormat.Custom;
+            this.UpToDatePicker.Location = new System.Drawing.Point(3, 64);
+            this.UpToDatePicker.Name = "UpToDatePicker";
+            this.UpToDatePicker.Size = new System.Drawing.Size(355, 20);
+            this.UpToDatePicker.TabIndex = 5;
+            // 
+            // label1
+            // 
+            this.label1.AutoSize = true;
+            this.label1.Location = new System.Drawing.Point(3, 44);
+            this.label1.Name = "label1";
+            this.label1.Size = new System.Drawing.Size(106, 13);
+            this.label1.TabIndex = 6;
+            this.label1.Text = "Up to Date and Time";
+            // 
             // richTextBox1
             // 
             this.richTextBox1.Dock = System.Windows.Forms.DockStyle.Fill;
@@ -227,7 +248,9 @@
             // 
             this.processToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.mergeToWorldToolStripMenuItem,
-            this.createTrimmedDatafileToolStripMenuItem});
+            this.mergeCreateFastToolStripMenuItem,
+            this.createTrimmedDatafileToolStripMenuItem,
+            this.recalculateWorldToolStripMenuItem});
             this.processToolStripMenuItem.Name = "processToolStripMenuItem";
             this.processToolStripMenuItem.Size = new System.Drawing.Size(59, 20);
             this.processToolStripMenuItem.Text = "Process";
@@ -253,24 +276,19 @@
             this.exitToolStripMenuItem.Text = "Exit";
             this.exitToolStripMenuItem.Click += new System.EventHandler(this.exitToolStripMenuItem_Click);
             // 
-            // UpToDatePicker
+            // mergeCreateFastToolStripMenuItem
             // 
-            this.UpToDatePicker.CustomFormat = "D: yyyy-MM-dd    T: HH:mm:ss";
-            this.UpToDatePicker.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.UpToDatePicker.Format = System.Windows.Forms.DateTimePickerFormat.Custom;
-            this.UpToDatePicker.Location = new System.Drawing.Point(3, 64);
-            this.UpToDatePicker.Name = "UpToDatePicker";
-            this.UpToDatePicker.Size = new System.Drawing.Size(355, 20);
-            this.UpToDatePicker.TabIndex = 5;
+            this.mergeCreateFastToolStripMenuItem.Name = "mergeCreateFastToolStripMenuItem";
+            this.mergeCreateFastToolStripMenuItem.Size = new System.Drawing.Size(209, 22);
+            this.mergeCreateFastToolStripMenuItem.Text = "Merge/Create (Fast)";
+            this.mergeCreateFastToolStripMenuItem.Click += new System.EventHandler(this.mergeCreateFastToolStripMenuItem_Click);
             // 
-            // label1
+            // recalculateWorldToolStripMenuItem
             // 
-            this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(3, 44);
-            this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(106, 13);
-            this.label1.TabIndex = 6;
-            this.label1.Text = "Up to Date and Time";
+            this.recalculateWorldToolStripMenuItem.Name = "recalculateWorldToolStripMenuItem";
+            this.recalculateWorldToolStripMenuItem.Size = new System.Drawing.Size(209, 22);
+            this.recalculateWorldToolStripMenuItem.Text = "Recalculate World";
+            this.recalculateWorldToolStripMenuItem.Click += new System.EventHandler(this.recalculateWorldToolStripMenuItem_Click);
             // 
             // MainForm
             // 
@@ -325,6 +343,8 @@
         private System.Windows.Forms.ToolStripMenuItem createTrimmedDatafileToolStripMenuItem;
         private System.Windows.Forms.DateTimePicker UpToDatePicker;
         private System.Windows.Forms.Label label1;
+        private System.Windows.Forms.ToolStripMenuItem mergeCreateFastToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem recalculateWorldToolStripMenuItem;
     }
 }
 

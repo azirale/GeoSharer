@@ -1,5 +1,5 @@
-﻿using Substrate;
-using System;
+﻿using System;
+using net.azirale.geosharer.core;
 
 namespace net.azirale.geosharer.console
 {
@@ -7,23 +7,11 @@ namespace net.azirale.geosharer.console
     {
         public static void Command(string ignored)
         {
-            AnvilWorld world = AnvilWorld.Open(WorldSelect.DirectoryFullPath);
-            if (world == null)
-            {
-                Console.WriteLine("Stats: Unable to open world '" + WorldSelect.DirectoryFullPath + "'");
-                return;
-            }
-
-            int regionCount = 0;
-            int chunkCount = 0;
-            foreach (AnvilRegion r in world.GetRegionManager())
-            {
-                regionCount++;
-                chunkCount += r.ChunkCount();
-            }
+            GeoWorldReader reader = new GeoWorldReader(WorldSelect.DirectoryFullPath);
+            GeoWorldReader.StatsResults results = reader.GetWorldStats();
             Messaging.Send("Stats: Gathered stats for world '" + WorldSelect.DirectoryFullPath +"'");
-            Messaging.Send("       Regions: " + regionCount);
-            Messaging.Send("       Chunks:  " + chunkCount);
+            Messaging.Send("       Regions: " + results.NumberOfRegions);
+            Messaging.Send("       Chunks:  " + results.NumberOfChunks);
         }
     }
 }

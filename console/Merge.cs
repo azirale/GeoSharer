@@ -6,7 +6,7 @@ namespace net.azirale.geosharer.console
 {
     static class Merge
     {
-        public static void Command(string ignored)
+        public static void Command(string options)
         {
             Console.CursorVisible = false;
             GeoMultifile gmf = new GeoMultifile();
@@ -19,7 +19,11 @@ namespace net.azirale.geosharer.console
             List<GeoChunkRaw> rawData = gmf.GetLatestChunkData();
             GeoWorldWriter gww = new GeoWorldWriter();
             gww.Progressing += Messaging.ReceiveProgress;
-            gww.UpdateWorld(WorldSelect.DirectoryFullPath, rawData);
+            Messaging.Send("Merge: Using options '" + options + "'");
+            bool skipLighting = options.Contains("l");
+            bool skipFluid = options.Contains("f");
+            bool skipStitching = options.Contains("s");
+            gww.UpdateWorld(WorldSelect.DirectoryFullPath, rawData, !skipFluid, !skipLighting, !skipStitching);
             Messaging.Send("");
             Messaging.Send("Merge: Added " + gww.Added + " chunks");
             Messaging.Send("Merge: Updated " + gww.Updated + " chunks");
