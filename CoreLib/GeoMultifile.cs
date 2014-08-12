@@ -156,7 +156,7 @@ namespace net.azirale.geosharer.core
                     //value.LatestMeta.RemoveAt(i);
                 }
             }
-            GeoFile gf = new GeoFile(value.FI.FullName);
+            GeosharerFile gf = new GeosharerFile(value.FI.FullName);
             value.Value.AddRange(gf.GetChunkData(thisFileMeta));
             value.Counter.Signal();
         }
@@ -191,7 +191,7 @@ namespace net.azirale.geosharer.core
         {
             GetFileMetaObject args = o as GetFileMetaObject;
             if (args == null) throw new ArgumentException("GetFileMeta received an object that was not a GetFileMetaObject");
-            GeoFile gf = new GeoFile(args.sourceFile.FullName);
+            GeosharerFile gf = new GeosharerFile(args.sourceFile.FullName);
             List<GeoChunkMeta> addme = gf.GetChunkMetadata();
             if (addme != null) args.meta.AddRange(addme);
             args.counter.Signal();

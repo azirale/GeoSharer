@@ -40,29 +40,20 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ChunkIndex.cs" />
-    <Compile Include="Endian.cs" />
+    <Compile Include="CustomExtensions.cs" />
     <Compile Include="Enums.cs" />
     <Compile Include="Events.cs" />
-    <Compile Include="GeoBiomeArray.cs" />
-    <Compile Include="GeoBlock.cs" />
-    <Compile Include="GeoBlockCollection.cs" />
-    <Compile Include="GeoBlockData.cs" />
-    <Compile Include="GeoBlockVector.cs" />
-    <Compile Include="GeoChunk.cs" />
     <Compile Include="GeoChunkMeta.cs" />
     <Compile Include="GeoChunkRaw.cs" />
-    <Compile Include="GeoFile.cs" />
+    <Compile Include="GeosharerFile.cs" />
     <Compile Include="GeoMultifile.cs" />
-    <Compile Include="GeoReader.cs" />
     <Compile Include="GeoRegion.cs" />
     <Compile Include="GeoWorldReader.cs" />
     <Compile Include="GeoWorldWriter.cs" />
     <Compile Include="IChunkSync.cs" />
-    <Compile Include="IndexFile.cs" />
     <Compile Include="MC.cs" />
     <Compile Include="Timestamp.cs" />
     <Compile Include="VersionInfo.cs" />
-    <Compile Include="WorldBuilder.cs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="Substrate">
