@@ -41,13 +41,13 @@ namespace net.azirale.geosharer.core
         /// What verbosity channel the message should be sent through - to allow the receiving object
         /// to decide whether to display it or not
         /// </summary>
-        public MessageVerbosity Verbosity { get; private set; }
+        public MessageChannel Verbosity { get; private set; }
         /// <summary>
         /// Create a new MessagePacket object with the given message text and verbosity channel
         /// </summary>
         /// <param name="verbosity">Verbosity channel message should be sent to</param>
         /// <param name="text">Text of the message</param>
-        public MessagePacket(MessageVerbosity verbosity, string text)
+        public MessagePacket(MessageChannel verbosity, string text)
         {
             this.Text = text;
             this.Verbosity = verbosity;

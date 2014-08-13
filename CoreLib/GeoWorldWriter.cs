@@ -106,7 +106,7 @@ namespace net.azirale.geosharer.core
                     }
                     catch (Exception ex)
                     {
-                        this.SendMessage(MessageVerbosity.Error, "Exception rebuilding height/fluid/lighting for Chunk X=" + chunk.X + " Y=" + chunk.Z + " in GeoWorldWriter.UpdateWorld, rethrowing: " + ex.Message);
+                        this.SendMessage(MessageChannel.Error, "Exception rebuilding height/fluid/lighting for Chunk X=" + chunk.X + " Y=" + chunk.Z + " in GeoWorldWriter.UpdateWorld, rethrowing: " + ex.Message);
                     }
                     try
                     {
@@ -118,31 +118,31 @@ namespace net.azirale.geosharer.core
                     }
                     catch (Exception ex)
                     {
-                        this.SendMessage(MessageVerbosity.Error, "Exception stitching lighting for Chunk X=" + chunk.X + " Y=" + chunk.Z +  " in GeoWorldWriter.UpdateWorld, rethrowing: " + ex.Message);
+                        this.SendMessage(MessageChannel.Error, "Exception stitching lighting for Chunk X=" + chunk.X + " Y=" + chunk.Z +  " in GeoWorldWriter.UpdateWorld, rethrowing: " + ex.Message);
                     }
                     current++;
                     this.SendProgress(current, total, "Done chunk X=" + chunk.X + " Z=" + chunk.Z);
                 }
                 try
                 {
-                    this.SendMessage(MessageVerbosity.Normal, "Saving Region");
+                    this.SendMessage(MessageChannel.Normal, "Saving Region");
                     rcm.Save(); // save to disk, we are done with this region
                 }
                 catch (Exception ex)
                 {
-                    this.SendMessage(MessageVerbosity.Error, "Exception saving region in GeoWorldWriter.UpdateWorld, rethrowing: " + ex.Message);
+                    this.SendMessage(MessageChannel.Error, "Exception saving region in GeoWorldWriter.UpdateWorld, rethrowing: " + ex.Message);
                     throw;
                 }
             }
             // all regions done
             try
             {
-                this.SendMessage(MessageVerbosity.Normal, "Saving World");
+                this.SendMessage(MessageChannel.Normal, "Saving World");
                 world.Save();
             }
             catch (Exception ex)
             {
-                this.SendMessage(MessageVerbosity.Error, "Exception saving world in GeoWorldWriter.UpdateWorld; rethrowing: " + ex.Message);
+                this.SendMessage(MessageChannel.Error, "Exception saving world in GeoWorldWriter.UpdateWorld; rethrowing: " + ex.Message);
                 throw;
             }
         }
@@ -179,15 +179,15 @@ namespace net.azirale.geosharer.core
             // Try to find the folder first, if it doesn't exist try and create it, if that fails then end with an error message
             if (!Directory.Exists(worldPath))
             {
-                this.SendMessage(MessageVerbosity.Normal, "WorldBuilder.UpdateWorld(): Could not find directory, attempting to create");
+                this.SendMessage(MessageChannel.Normal, "WorldBuilder.UpdateWorld(): Could not find directory, attempting to create");
                 try
                 {
                     Directory.CreateDirectory(worldPath);
-                    this.SendMessage(MessageVerbosity.Normal, "WorldBuilder.UpdateWorld(): Created new world directory");
+                    this.SendMessage(MessageChannel.Normal, "WorldBuilder.UpdateWorld(): Created new world directory");
                 }
                 catch
                 {
-                    this.SendMessage(MessageVerbosity.Error, "WorldBuilder.UpdateWorld(): Unable to create directory, aborting method");
+                    this.SendMessage(MessageChannel.Error, "WorldBuilder.UpdateWorld(): Unable to create directory, aborting method");
                     return false;
                 }
             }
@@ -209,7 +209,7 @@ namespace net.azirale.geosharer.core
         /// </summary>
         /// <param name="verbosity">Which verbosity channel the message should be sent on</param>
         /// <param name="text">The text of the message</param>
-        private void SendMessage(MessageVerbosity verbosity, string text)
+        private void SendMessage(MessageChannel verbosity, string text)
         {
             Message msg = this.Messaging;
             if (msg != null) msg(this, new MessagePacket(verbosity, text));

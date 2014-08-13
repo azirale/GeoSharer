@@ -48,7 +48,7 @@ namespace net.azirale.geosharer.core
         /// <returns></returns>
         public List<GeoChunkMeta> GetChunkMetadata()
         {
-            this.SendMessage(MessageVerbosity.Verbose, "Acquiring all chunk metadata");
+            this.SendMessage(MessageChannel.Verbose, "Acquiring all chunk metadata");
             CountdownEvent counter = new CountdownEvent(this.sourceFiles.Count);
             List<List<GeoChunkMeta>> allMeta = new List<List<GeoChunkMeta>>(this.sourceFiles.Count);
             foreach (FileInfo fi in this.sourceFiles)
@@ -88,8 +88,8 @@ namespace net.azirale.geosharer.core
                     dict[index] = each;
                 }
             }
-            this.SendMessage(MessageVerbosity.Normal, "Got " + allMeta.Count + " chunks");
-            this.SendMessage(MessageVerbosity.Normal, "Kept " + dict.Count + " chunks");
+            this.SendMessage(MessageChannel.Normal, "Got " + allMeta.Count + " chunks");
+            this.SendMessage(MessageChannel.Normal, "Kept " + dict.Count + " chunks");
             List<GeoChunkMeta> value = value = new List<GeoChunkMeta>(dict.Values);
             return value;
         }
@@ -115,7 +115,7 @@ namespace net.azirale.geosharer.core
         {
             // Get only the most recent chunk data
             List<GeoChunkMeta> latestMeta = this.GetLatestChunkMeta(upToDate);
-            this.SendMessage(MessageVerbosity.Verbose, "Getting data");
+            this.SendMessage(MessageChannel.Verbose, "Getting data");
             // Scan each file - if it contains data we need: extract it then add it to the return
             CountdownEvent counter = new CountdownEvent(this.sourceFiles.Count);
             List<List<GeoChunkRaw>> allRaw = new List<List<GeoChunkRaw>>(this.sourceFiles.Count);
@@ -126,7 +126,7 @@ namespace net.azirale.geosharer.core
                 ThreadPool.QueueUserWorkItem(new WaitCallback(GetLatestRaw), new GetLatestRawObject(counter, fi, fileRaw, latestMeta) );
             }
             counter.Wait();
-            this.SendMessage(MessageVerbosity.Normal, "Grabbed data. Merging to single list");
+            this.SendMessage(MessageChannel.Normal, "Grabbed data. Merging to single list");
             // We will return this
             List<GeoChunkRaw> value;
             int totalDistinctChunks = 0;
@@ -233,15 +233,15 @@ namespace net.azirale.geosharer.core
             return this.Messaging;
         }
 
-        private void SendMessage(MessageVerbosity verbosity, string text)
+        private void SendMessage(MessageChannel verbosity, string text)
         {
             Message msg = this.Messaging;
-            if (msg != null) msg(this, new MessagePacket(MessageVerbosity.Error, text));
+            if (msg != null) msg(this, new MessagePacket(MessageChannel.Error, text));
         }
 
         private void ErrorMessage(string text)
         {
-            this.SendMessage(MessageVerbosity.Error, text);
+            this.SendMessage(MessageChannel.Error, text);
         }
         #endregion
     }

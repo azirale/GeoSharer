@@ -7,7 +7,7 @@ namespace net.azirale.geosharer.core
     public enum ChunkInsertResult { Added, Updated, Skipped, Failed }
 
     /// <summary>
-    /// Verbosity channel for messages - see IMessageSender interface
+    /// Channel for messages - see IMessageSender interface
     /// </summary>
-    public enum MessageVerbosity { Error, Quiet, Normal, Verbose, Debug }
+    public enum MessageChannel { Error, Quiet, Normal, Verbose, Debug }
 }

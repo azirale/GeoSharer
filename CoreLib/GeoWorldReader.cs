@@ -51,7 +51,7 @@ namespace net.azirale.geosharer.core
         /// </summary>
         /// <param name="verbosity">Which verbosity channel the message should be sent on</param>
         /// <param name="text">The text of the message</param>
-        private void SendMessage(MessageVerbosity verbosity, string text)
+        private void SendMessage(MessageChannel verbosity, string text)
         {
             Message msg = this.Messaging;
             if (msg != null) msg(this, new MessagePacket(verbosity, text));

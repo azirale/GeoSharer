@@ -27,6 +27,11 @@ namespace net.azirale.geosharer.core
             get { return this.meta.Z; }
         }
 
+        public XZIndex Index
+        {
+            get { return this.meta.Index; }
+        }
+
         public long TimeStamp
         {
             get { return this.meta.TimeStamp; }

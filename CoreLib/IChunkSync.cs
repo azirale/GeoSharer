@@ -17,9 +17,12 @@ namespace net.azirale.geosharer.core
         /// </summary>
         int Z { get; }
         /// <summary>
-        /// Should return the timestamp of when the chunk was last
-        /// updated with live data. Unix DateTime in milliseconds.
+        /// Should return the timestamp of when the chunk was last updated with live data. Unix DateTime in milliseconds.
         /// </summary>
         long TimeStamp { get; }
+        /// <summary>
+        /// Should return the XZ index of this IChunkSync object
+        /// </summary>
+        XZIndex Index { get; }
     }
 }
