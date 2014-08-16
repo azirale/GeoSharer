@@ -17,6 +17,45 @@ namespace net.azirale.geosharer.core
             this.Data = data;
         }
 
+        public GeoChunkRaw(NbtTree originalTree)
+        {
+            TagNodeCompound originalLevel = originalTree.Root["Level"].ToTagCompound();
+            // get the metadata
+            int x = originalLevel["xPos"].ToTagInt().Data;
+            int z = originalLevel["zPos"].ToTagInt().Data;
+            long timestamp = originalLevel.ContainsKey("GeoTimestamp") ? originalLevel["GeoTimestamp"].ToTagLong().Data : 0;
+            this.meta = new GeoChunkMeta(x, z, timestamp, 0, 0, string.Empty);
+            // get the data
+            NbtTree newTree = new NbtTree();
+            TagNodeCompound root = newTree.Root;
+            TagNodeCompound level = new TagNodeCompound();
+            root.Add("Level", level);
+            level.Add("xPos", originalLevel["xPos"]);
+            level.Add("zPos", originalLevel["zPos"]);
+            level.Add("Biomes", originalLevel["Biomes"]);
+            TagNodeList oldSections = originalLevel["Sections"] as TagNodeList;
+            TagNodeList newSections = new TagNodeList(TagType.TAG_COMPOUND);
+            foreach (TagNode node in oldSections)
+            {
+                TagNodeCompound oldSection = node as TagNodeCompound;
+                TagNodeCompound newSection = new TagNodeCompound();
+                newSections.Add(newSection);
+                newSection.Add("Y", oldSection["Y"]);
+                newSection.Add("Blocks", oldSection["Blocks"]);
+                newSection.Add("Data", oldSection["Data"]);
+                if (oldSection.ContainsKey("Add")) newSection.Add("Add", oldSection["Add"]);
+            }
+            byte[] data;
+            using (MemoryStream ms = new MemoryStream())
+            using (GZipStream zs = new GZipStream(ms, CompressionMode.Compress))
+            {
+                newTree.WriteTo(zs);
+                zs.Close();
+                data = ms.ToArray();
+            }
+            this.Data = data;
+        }
+
         public int X
         {
             get { return this.meta.X; }

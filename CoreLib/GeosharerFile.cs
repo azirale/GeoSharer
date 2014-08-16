@@ -129,5 +129,30 @@ namespace net.azirale.geosharer.core
             }
         }
         #endregion
+
+        public static void WriteNew(string filePath, List<GeoChunkRaw> chunks)
+        {
+            if (!filePath.EndsWith(".geosharer")) filePath = filePath + ".geosharer";
+            FileInfo fi = new FileInfo(filePath);
+            using (FileStream fs = fi.Create())
+            using (GZipStream zs = new GZipStream(fs, CompressionMode.Compress))
+            {
+                int version = 4;
+                int chunkStartOffset = 4 + 4 + (4 + 4 + 8) * chunks.Count; // VERSION + NUMCHUNKS + ([numchunks]*X+Z+TIME+START)
+                zs.Write(version.ToBigEndianByteArray());
+                zs.Write(chunks.Count.ToBigEndianByteArray());
+                for (int i = 0; i < chunks.Count; ++i) { zs.Write(chunks[i].Index.X.ToBigEndianByteArray()); }
+                for (int i = 0; i < chunks.Count; ++i) { zs.Write(chunks[i].Index.Z.ToBigEndianByteArray()); }
+                for (int i = 0; i < chunks.Count; ++i) { zs.Write(chunks[i].TimeStamp.ToBigEndianByteArray()); }
+                for (int i = 0; i < chunks.Count; ++i)
+                {
+                    zs.Write(chunkStartOffset.ToBigEndianByteArray());
+                    chunkStartOffset += chunks[i].Data.Length;
+                }
+                for (int i = 0; i < chunks.Count; ++i) { zs.Write(chunks[i].Data); }
+                zs.Close();
+                fs.Close();
+            }
+        }
     }
 }
