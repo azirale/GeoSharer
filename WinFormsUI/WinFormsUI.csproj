@@ -79,7 +79,13 @@
     <ProjectReference Include="..\CoreLib\CoreLib.csproj">
       <Project>{2ed86aaa-5f14-4239-aaeb-5991f25d6b43}</Project>
       <Name>CoreLib</Name>
+      <Private>False</Private>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup />
+  <ItemGroup>
+    <EmbeddedResource Include="EmbeddedLibraries\CoreLib.dll" />
+    <EmbeddedResource Include="EmbeddedLibraries\Substrate.dll" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
