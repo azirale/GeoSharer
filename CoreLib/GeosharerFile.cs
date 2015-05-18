@@ -37,14 +37,17 @@ namespace net.azirale.geosharer.core
             using (FileStream fs = File.OpenRead(this.FilePath))
             using (GZipStream zs = new GZipStream(fs, CompressionMode.Decompress))
             {
-                byte[] header = new byte[8];
-                zs.Read(header, 0, 8);
+                byte[] header = new byte[4];
+                zs.Read(header, 0, 4);
                 int version = BitConverter.ToInt32(header, 0).EndianReverse();
                 List<GeoChunkMeta> returnValue;
                 switch (version)
                 {
+                    case 5:
+                        returnValue = GetChunkMetadataV5(zs);
+                        break;
                     case 4:
-                        returnValue = GetChunkMetadataV4(zs, header);
+                        returnValue = GetChunkMetadataV4(zs);
                         break;
                     default:
                         throw new InvalidDataException("GeoSharer file '" + this.FilePath + "' has unrecognised version number '" + version + "'");
@@ -54,14 +57,78 @@ namespace net.azirale.geosharer.core
         }
 
         /// <summary>
-        /// Read and return the chunk metadata from a geosharer file with format 4
+        /// Read and return the chunk metadata from a geosharer file with format 5
         /// </summary>
         /// <param name="zs">Active GZipStream of the file</param>
         /// <param name="header">The 8 byte header already read from the GZipStream</param>
         /// <returns></returns>
-        private List<GeoChunkMeta> GetChunkMetadataV4(GZipStream zs, byte[] header)
+        private List<GeoChunkMeta> GetChunkMetadataV5(GZipStream zs)
         {
-            int numberOfChunks = BitConverter.ToInt32(header, 4).EndianReverse();
+            // gather data
+            int numberOfChunks = ReadInt(zs);
+            string serverIP = ReadString(zs);
+            int[] x = new int[numberOfChunks]; // x coordinates
+            int[] z = new int[numberOfChunks]; // z coordinates
+            int[] d = new int[numberOfChunks]; // dimensions
+            long[] t = new long[numberOfChunks]; // timestamps
+            int[] s = new int[numberOfChunks]; // start byte indices
+            int[] e = new int[numberOfChunks]; // end byte indices
+            for (int i = 0; i < numberOfChunks; ++i) { x[i] = ReadInt(zs); }
+            for (int i = 0; i < numberOfChunks; ++i) { z[i] = ReadInt(zs); }
+            for (int i = 0; i < numberOfChunks; ++i) { d[i] = ReadInt(zs); }
+            for (int i = 0; i < numberOfChunks; ++i) { t[i] = ReadLong(zs); }
+            for (int i = 0; i < numberOfChunks; ++i) { s[i] = ReadInt(zs); }
+            Array.Copy(s, 1, e, 0, s.Length - 1); e[numberOfChunks - 1] = -1;
+            // create metadata objects
+            List<GeoChunkMeta> returnValue = new List<GeoChunkMeta>(numberOfChunks);
+            for (int i = 0; i < numberOfChunks; ++i)
+            {
+                returnValue.Add(new GeoChunkMeta(x[i], z[i], d[i], t[i], s[i], e[i], this.FilePath));
+            }
+            return returnValue;
+        }
+
+        private string ReadString(GZipStream zs)
+        {
+            int lengthOfString = ReadInt(zs);
+            byte[] buffer = new byte[lengthOfString];
+            zs.Read(buffer, 0, lengthOfString);
+            return System.Text.Encoding.UTF8.GetString(buffer);
+        }
+
+    
+        /// <summary>
+        /// Reads the next 4 decompressed bytes from the provided <see cref="GZipStream"/> and returns them as an integer
+        /// </summary>
+        /// <param name="zs">The <see cref="GZipStream"/> to read an integer from</param>
+        /// <returns>A new integer value</returns>
+        private int ReadInt(GZipStream zs)
+        {
+            byte[] buffer = new byte[4];
+            zs.Read(buffer, 0, 4);
+            return BitConverter.ToInt32(buffer, 0).EndianReverse();
+        }
+
+        /// <summary>
+        /// Reads the next 8 decompressed bytes from the provided <see cref="GZipStream"/> and returns them as a long
+        /// </summary>
+        /// <param name="zs">The <see cref="GZipStream"/> to read a long from</param>
+        /// <returns>A new long value</returns>
+        private long ReadLong(GZipStream zs)
+        {
+            byte[] buffer = new byte[8];
+            zs.Read(buffer, 0, 8);
+            return BitConverter.ToInt64(buffer, 0).EndianReverse();
+        }
+
+        /// <summary>
+        /// Read and return the chunk metadata from a geosharer file with format 4
+        /// </summary>
+        /// <param name="zs">Active GZipStream of the file</param>
+        /// <returns></returns>
+        private List<GeoChunkMeta> GetChunkMetadataV4(GZipStream zs)
+        {
+            int numberOfChunks = ReadInt(zs);
             byte[] chunkMetaBytes = new byte[numberOfChunks * (4 + 4 + 8 + 4)]; // int x, int y, long timestamp, int dataStart
             zs.Read(chunkMetaBytes, 0, chunkMetaBytes.Length);
             int xFirstByteIndex = 0; // Byte index where X values start
@@ -99,7 +166,7 @@ namespace net.azirale.geosharer.core
                 List<GeoChunkRaw> returnValue = new List<GeoChunkRaw>(chunkMetadata.Count);
                 for (int i = 0; i < chunkMetadata.Count; ++i)
                 {
-                    if (chunkMetadata[i].SourcePath != this.FilePath) throw new ArgumentException("GeoFile.GetChunkData: Asked for chunk from a different file");
+                    if (chunkMetadata[i].SourcePath != this.FilePath) throw new ArgumentException(typeof(GeosharerFile).Name + ".GetChunkData: Asked for chunk from a different file");
                     int jumpDistance = chunkMetadata[i].DataStart - nextBytePosition;
                     if (jumpDistance > 0)
                     {
@@ -123,36 +190,11 @@ namespace net.azirale.geosharer.core
                         zs.Read(chunkdata, 0, length);
                         nextBytePosition += length;
                     }
-                    returnValue.Add(new GeoChunkRaw(chunkMetadata[i], chunkdata));
+                        returnValue.Add(new GeoChunkRaw(chunkMetadata[i], chunkdata));
                 }
                 return returnValue;
             }
         }
         #endregion
-
-        public static void WriteNew(string filePath, List<GeoChunkRaw> chunks)
-        {
-            if (!filePath.EndsWith(".geosharer")) filePath = filePath + ".geosharer";
-            FileInfo fi = new FileInfo(filePath);
-            using (FileStream fs = fi.Create())
-            using (GZipStream zs = new GZipStream(fs, CompressionMode.Compress))
-            {
-                int version = 4;
-                int chunkStartOffset = 4 + 4 + (4 + 4 + 8) * chunks.Count; // VERSION + NUMCHUNKS + ([numchunks]*X+Z+TIME+START)
-                zs.Write(version.ToBigEndianByteArray());
-                zs.Write(chunks.Count.ToBigEndianByteArray());
-                for (int i = 0; i < chunks.Count; ++i) { zs.Write(chunks[i].Index.X.ToBigEndianByteArray()); }
-                for (int i = 0; i < chunks.Count; ++i) { zs.Write(chunks[i].Index.Z.ToBigEndianByteArray()); }
-                for (int i = 0; i < chunks.Count; ++i) { zs.Write(chunks[i].TimeStamp.ToBigEndianByteArray()); }
-                for (int i = 0; i < chunks.Count; ++i)
-                {
-                    zs.Write(chunkStartOffset.ToBigEndianByteArray());
-                    chunkStartOffset += chunks[i].Data.Length;
-                }
-                for (int i = 0; i < chunks.Count; ++i) { zs.Write(chunks[i].Data); }
-                zs.Close();
-                fs.Close();
-            }
-        }
     }
 }

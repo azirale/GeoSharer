@@ -7,7 +7,26 @@ namespace net.azirale.geosharer.core
     public class GeoChunkMeta : IChunkSync
     {
         /// <summary>
-        /// Create a new GeoChunkMeta object with all of the necessary fields defined
+        /// Create a new GeoChunkMeta object with all of the necessary fields defined.
+        /// </summary>
+        /// <param name="x">Chunk X coordinate</param>
+        /// <param name="z">Chunk Z coordinate</param>
+        /// <param name="d">Chunk dimension number</param>
+        /// <param name="timestamp">Unix time this chunk was last updated by geosharer</param>
+        /// <param name="dataStart">Position of first byte of chunk data in decompressed geosharer file</param>
+        /// <param name="dataEnd">Position of last byte of chunk data in decompressed geosharer file (-1 if last chunk)</param>
+        /// <param name="sourcePath">The file path to the geosharer file this metadata came from</param>
+        public GeoChunkMeta(int x, int z, int d, long timestamp, int dataStart, int dataEnd, string sourcePath)
+        {
+            this.index = new XZDIndex(x, z, d);
+            this.timeStamp = timestamp;
+            this.dataStart = dataStart;
+            this.dataEnd = dataEnd;
+            this.sourcePath = sourcePath;
+        }
+
+        /// <summary>
+        /// DEPRECATED: Please include dimension in constructor. Create a new GeoChunkMeta object with all of the necessary fields defined.
         /// </summary>
         /// <param name="x">Chunk X coordinate</param>
         /// <param name="z">Chunk Z coordinate</param>
@@ -16,16 +35,12 @@ namespace net.azirale.geosharer.core
         /// <param name="dataEnd">Position of last byte of chunk data in decompressed geosharer file (-1 if last chunk)</param>
         /// <param name="sourcePath">The file path to the geosharer file this metadata came from</param>
         public GeoChunkMeta(int x, int z, long timestamp, int dataStart, int dataEnd, string sourcePath)
+            : this(x, z, 0, timestamp, dataStart, dataEnd, sourcePath)
         {
-            this.index = new XZIndex(x, z);
-            this.timeStamp = timestamp;
-            this.dataStart = dataStart;
-            this.dataEnd = dataEnd;
-            this.sourcePath = sourcePath;
         }
 
         #region Fields
-        private readonly XZIndex index;
+        private readonly XZDIndex index;
         private readonly long timeStamp;
         private readonly int dataStart;
         private readonly int dataEnd;
@@ -41,6 +56,10 @@ namespace net.azirale.geosharer.core
         /// Chunk Z coordinate
         /// </summary>
         public int Z { get { return this.index.Z; } }
+        /// <summary>
+        /// Integer dimension number
+        /// </summary>
+        public int Dimension { get { return this.index.Dimension; } }
         /// <summary>
         /// Unix time this chunk was last updated by geosharer
         /// </summary>
@@ -60,7 +79,7 @@ namespace net.azirale.geosharer.core
         /// <summary>
         /// XZIndex of this chunk, suitable for hashing and equality comparisons
         /// </summary>
-        public XZIndex Index { get { return this.index; } }
+        public XZDIndex Index { get { return this.index; } }
         #endregion
 
         #region Overrides and Implementations

@@ -47,91 +47,97 @@ namespace net.azirale.geosharer.core
             if (!this.CreateOrLoadWorld(worldPath)) return;
             AnvilWorld world = AnvilWorld.Create(worldPath);
             SetWorldDefaults(world);
-            // Break chunks into regions for better disk access
-            IEnumerable<GeoRegion> regions = this.GetRegionBreakout(chunks);
-            RegionChunkManager rcm = world.GetChunkManager();
+            // Break chunks into dimensions and regions for better disk access
+            Dictionary<int, Dictionary<XZDIndex, GeoRegion>> dimensions = this.GetRegionBreakout(chunks);
+
             long total = chunks.Count;
             long current = 0;
             this.Added = 0;
             this.Updated = 0;
             this.Skipped = 0;
             this.Invalid = 0;
-            foreach (GeoRegion region in regions)
+
+            foreach (int dimension in dimensions.Keys)
             {
-                foreach (GeoChunkRaw chunk in region.Chunks)
+                IEnumerable<GeoRegion> regions = dimensions[dimension].Values;
+                RegionChunkManager rcm = world.GetChunkManager(dimension);
+                foreach (GeoRegion region in regions)
                 {
-                    if (rcm.ChunkExists(chunk.X, chunk.Z))
+                    foreach (GeoChunkRaw chunk in region.Chunks)
                     {
-                        // check the timestamp, if it has one
-                        AnvilChunk c = rcm.GetChunk(chunk.X,chunk.Z) as AnvilChunk;
-                        TagNodeCompound level = c.Tree.Root["Level"] as TagNodeCompound;
-                        if (level.ContainsKey("GeoTimestamp"))
+                        if (rcm.ChunkExists(chunk.X, chunk.Z))
                         {
-                            long existingTimestamp = level["GeoTimestamp"].ToTagLong().Data;
-                            if (existingTimestamp > chunk.TimeStamp)
+                            // check the timestamp, if it has one
+                            AnvilChunk c = rcm.GetChunk(chunk.X, chunk.Z) as AnvilChunk;
+                            TagNodeCompound level = c.Tree.Root["Level"] as TagNodeCompound;
+                            if (level.ContainsKey("GeoTimestamp"))
                             {
-                                this.Skipped++;
-                                current++;
-                                this.SendProgress(current, total, "Skipped chunk X=" + chunk.X + " Z=" + chunk.Z);
-                                continue;
+                                long existingTimestamp = level["GeoTimestamp"].ToTagLong().Data;
+                                if (existingTimestamp > chunk.TimeStamp)
+                                {
+                                    this.Skipped++;
+                                    current++;
+                                    this.SendProgress(current, total, "Skipped chunk X=" + chunk.X + " Z=" + chunk.Z + " D=" + chunk.Dimension);
+                                    continue;
+                                }
+                            }
+                            this.Updated++;
+                        }
+                        else
+                        {
+                            this.Added++;
+                        }
+                        AnvilChunk ac = chunk.GetAnvilChunk();
+                        if (ac == null)
+                        {
+                            this.Invalid++;
+                            current++;
+                            this.SendProgress(current, total, "Invalid chunk X=" + chunk.X + " Z=" + chunk.Z + " D=" + chunk.Dimension);
+                            continue;
+                        }
+                        rcm.DeleteChunk(chunk.X, chunk.Z);
+                        rcm.SetChunk(chunk.X, chunk.Z, ac);
+                        ChunkRef cr = rcm.GetChunkRef(chunk.X, chunk.Z);
+                        AlphaBlockCollection blocks = cr.Blocks;
+                        try
+                        {
+                            blocks.RebuildHeightMap();
+                            if (doFluid) blocks.RebuildFluid();
+                            if (doLighting)
+                            {
+                                blocks.RebuildBlockLight();
+                                blocks.RebuildSkyLight();
                             }
                         }
-                        this.Updated++;
-                    }
-                    else
-                    {
-                        this.Added++;
-                    }
-                    AnvilChunk ac = chunk.GetAnvilChunk();
-                    if (ac == null)
-                    {
-                        this.Invalid++;
+                        catch (Exception ex)
+                        {
+                            this.SendMessage(MessageChannel.Error, "Exception rebuilding height/fluid/lighting for Chunk X=" + chunk.X + " Y=" + chunk.Z + " D=" + chunk.Dimension + " in GeoWorldWriter.UpdateWorld, rethrowing: " + ex.Message);
+                        }
+                        try
+                        {
+                            if (doLighting && doStitching)
+                            {
+                                blocks.StitchBlockLight();
+                                blocks.StitchSkyLight();
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            this.SendMessage(MessageChannel.Error, "Exception stitching lighting for Chunk X=" + chunk.X + " Y=" + chunk.Z + " D=" + chunk.Dimension + " in GeoWorldWriter.UpdateWorld, rethrowing: " + ex.Message);
+                        }
                         current++;
-                        this.SendProgress(current, total, "Invalid chunk X=" + chunk.X + " Z=" + chunk.Z);
-                        continue;
-                    }
-                    rcm.DeleteChunk(chunk.X, chunk.Z);
-                    rcm.SetChunk(chunk.X, chunk.Z, ac);
-                    ChunkRef cr = rcm.GetChunkRef(chunk.X, chunk.Z);
-                    AlphaBlockCollection blocks = cr.Blocks;
-                    try
-                    {
-                        blocks.RebuildHeightMap();
-                        if (doFluid) blocks.RebuildFluid();
-                        if (doLighting)
-                        {
-                            blocks.RebuildBlockLight();
-                            blocks.RebuildSkyLight();
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        this.SendMessage(MessageChannel.Error, "Exception rebuilding height/fluid/lighting for Chunk X=" + chunk.X + " Y=" + chunk.Z + " in GeoWorldWriter.UpdateWorld, rethrowing: " + ex.Message);
+                        this.SendProgress(current, total, "Done chunk X=" + chunk.X + " Z=" + chunk.Z + " D=" + chunk.Dimension);
                     }
                     try
                     {
-                        if (doLighting && doStitching)
-                        {
-                            blocks.StitchBlockLight();
-                            blocks.StitchSkyLight();
-                        }
+                        this.SendMessage(MessageChannel.Normal, "Saving Region");
+                        rcm.Save(); // save to disk, we are done with this region
                     }
                     catch (Exception ex)
                     {
-                        this.SendMessage(MessageChannel.Error, "Exception stitching lighting for Chunk X=" + chunk.X + " Y=" + chunk.Z +  " in GeoWorldWriter.UpdateWorld, rethrowing: " + ex.Message);
+                        this.SendMessage(MessageChannel.Error, "Exception saving region in GeoWorldWriter.UpdateWorld, rethrowing: " + ex.Message);
+                        throw;
                     }
-                    current++;
-                    this.SendProgress(current, total, "Done chunk X=" + chunk.X + " Z=" + chunk.Z);
-                }
-                try
-                {
-                    this.SendMessage(MessageChannel.Normal, "Saving Region");
-                    rcm.Save(); // save to disk, we are done with this region
-                }
-                catch (Exception ex)
-                {
-                    this.SendMessage(MessageChannel.Error, "Exception saving region in GeoWorldWriter.UpdateWorld, rethrowing: " + ex.Message);
-                    throw;
                 }
             }
             // all regions done
@@ -160,18 +166,33 @@ namespace net.azirale.geosharer.core
             level.GeneratorName = "flat"; // superflat for generated chunks if loaded in MC
         }
 
-        private IEnumerable<GeoRegion> GetRegionBreakout(List<GeoChunkRaw> chunks)
+
+
+        private Dictionary<int, Dictionary<XZDIndex, GeoRegion>> GetRegionBreakout(List<GeoChunkRaw> chunks)
         {
-            Dictionary<Tuple<int,int>,GeoRegion> regions = new Dictionary<Tuple<int,int>,GeoRegion>();
+            // dictionary by dimension, then by XZD index
+            Dictionary<int, Dictionary<XZDIndex, GeoRegion>> dimensions = new Dictionary<int, Dictionary<XZDIndex, GeoRegion>>();
             for (int i = 0; i < chunks.Count; ++i)
             {
                 GeoChunkRaw chunk = chunks[i];
-                Tuple<int, int> regionCode = new Tuple<int, int>(chunk.RX, chunk.RZ);
+                XZDIndex regionIndex = new XZDIndex(chunk.RX, chunk.RZ, chunk.Dimension);
+                // get the dictionary of regions for this dimension
+                Dictionary<XZDIndex, GeoRegion> dimension;
+                if (!dimensions.TryGetValue(regionIndex.Dimension, out dimension)) {
+                    dimension = new Dictionary<XZDIndex, GeoRegion>();
+                    dimensions[regionIndex.Dimension] = dimension;
+                }
+                // get this region
                 GeoRegion region;
-                if (!regions.TryGetValue(regionCode, out region)) { region = new GeoRegion(regionCode.Item1, regionCode.Item2); regions[regionCode] = region; }
+                if (!dimension.TryGetValue(regionIndex, out region))
+                {
+                    region = new GeoRegion(regionIndex.X, regionIndex.Z, regionIndex.Dimension);
+                    dimension[regionIndex] = region;
+                }
+                // add chunk to region
                 region.Chunks.Add(chunk);
             }
-            return regions.Values;
+            return dimensions;
         }
 
         private bool CreateOrLoadWorld(string worldPath)

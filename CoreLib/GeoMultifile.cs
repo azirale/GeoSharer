@@ -77,12 +77,12 @@ namespace net.azirale.geosharer.core
         
         public List<GeoChunkMeta> GetLatestChunkMeta(DateTime upToDate)
         {
-            Dictionary<long, GeoChunkMeta> dict = new Dictionary<long, GeoChunkMeta>();
+            Dictionary<XZDIndex, GeoChunkMeta> dict = new Dictionary<XZDIndex, GeoChunkMeta>();
             List<GeoChunkMeta> allMeta = this.GetChunkMetadata();
             long upToTimestamp = (long)((upToDate - new DateTime(1970, 1, 1, 0, 0, 0)).TotalMilliseconds);
             foreach (GeoChunkMeta each in allMeta)
             {
-                long index = ((long)(each.X) << 32) + (long)each.Z;
+                XZDIndex index = each.Index;
                 if (each.TimeStamp < upToTimestamp && (!dict.ContainsKey(index) || dict[index].TimeStamp < each.TimeStamp))
                 {
                     dict[index] = each;

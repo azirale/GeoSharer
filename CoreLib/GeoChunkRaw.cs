@@ -66,7 +66,12 @@ namespace net.azirale.geosharer.core
             get { return this.meta.Z; }
         }
 
-        public XZIndex Index
+        public int Dimension
+        {
+            get { return this.meta.Dimension; }
+        }
+
+        public XZDIndex Index
         {
             get { return this.meta.Index; }
         }

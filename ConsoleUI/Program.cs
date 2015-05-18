@@ -58,7 +58,7 @@ namespace net.azirale.geosharer.console
                 Command cmd;
                 if (CommandAliases.TryGetValue(commandText, out cmd))
                 {
-                    if (i+1 < args.Length) { cmd(args[i]); }
+                    if (i+1 < args.Length) { cmd(args[i+1]); } // this is incorrect, need to test if next argument is also a command
                     else cmd(string.Empty);
                 }
                 else Messaging.Send("Program: Did not recognise command switch '" + commandText + "'");
@@ -89,7 +89,7 @@ namespace net.azirale.geosharer.console
             Command invoke;
             if (CommandAliases.TryGetValue(commandText, out invoke))
             {
-                invoke(commandText);
+                invoke(argumentText);
             }
             else
             {
