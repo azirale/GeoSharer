@@ -1,6 +1,6 @@
 GeoSharer
 =========
-A Minecraft ForgeModLoader mod and a .NET/Mono tool for sharing minecraft multiplayer map data. Tailored for use with Civcraft (http://www.civcraft.vg/).
+A Minecraft ForgeModLoader mod and a .NET/Mono tool for sharing minecraft multiplayer map data. Tailored for use with Civcraft (http://www.civcraft.vg/) --Dead link: Civcraft was shut down some time ago--
 
 
 Description
